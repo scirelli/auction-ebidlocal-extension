@@ -1,0 +1,71 @@
+{
+    "name":"AC Scrape",
+    "version": "0.5",
+    "description": "Scrapes AircraftClubs.com calendars and exports them to Google Calendar.",
+    "manifest_version": 2,
+    "minimum_chrome_version": "29",
+
+    "background": { 
+        "scripts": [
+            "js/lib/q.js",
+            "js/lib/date.js",
+            "js/lib/md5.js",
+            "js/lib/extras-string.js",
+            "js/lib/xhrWithAuth.js",
+            "js/lib/calendar/Events.js",
+            "js/lib/calendar/Event.js",
+            "js/lib/calendar/CalendarList.js",
+            "js/lib/calendar/CalendarListEntry.js",
+            "js/lib/calendar/Calendars.js",
+            "js/lib/calendar/Calendar.js",
+            "js/lib/jstz.min.js",
+            "background.js"
+        ],
+        "persistent":false
+    },
+
+    "page_action" :{
+        "default_icon" : "icon-128.png",
+        "default_title" : "To Google Calendar",
+        "default_popup":"aircraftclubs_popup.html"
+    },
+
+    "icons" : {
+        "24" : "icon-24.png",
+        "32" : "icon-32.png",
+        "48" : "icon-48.png",
+        "128" : "icon-128.png"
+    },
+
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*.aircraftclubs.com/pages/view/reserve*"
+            ],
+            "js": [
+                "js/lib/q.js",
+                "js/lib/date.js",
+                "js/lib/md5.js",
+                "js/lib/extras-string.js",
+                "js/lib/jquery-2.1.1.min.js",
+                "js/contentscript/main.js"
+            ],
+            "css":[
+            ]
+        }
+    ],
+    "oauth2": {
+        "client_id": "920486903505-l7qd9c103n4qk20f31fl8qin0302icks.apps.googleusercontent.com",
+        "scopes": [
+            "https://www.googleapis.com/auth/calendar"
+        ]
+    },
+    "permissions" : [
+        "tabs",
+        "*://*.aircraftclubs.com/*",
+        "*://apis.google.com/*",
+        "*://www.googleapis.com/*",
+         "identity"
+    ],
+    "content_security_policy": "script-src 'self' https://apis.google.com https://oauth.googleusercontent.com https://accounts.google.com https://ssl.gstatic.com https://www.googleapis.com; object-src 'self'"
+}

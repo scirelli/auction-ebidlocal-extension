@@ -1,0 +1,27 @@
+{
+  "name": "auction-ebidlocal",
+  "version": "1.0.0",
+  "description": "Chrome plugin for auction ebidlocal.com",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scirelli/auction-ebidlocal.git"
+  },
+  "keywords": [
+    "auction",
+    "ebidlocal"
+  ],
+  "author": "Steve Cirelli",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/scirelli/auction-ebidlocal/issues"
+  },
+  "homepage": "https://github.com/scirelli/auction-ebidlocal#readme",
+  "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.6.0"
+  }
+}
