@@ -26,10 +26,23 @@ if(!Function.prototype.chain) {
     Function.prototype.chain = function chain(iter) {
         let itm = iter.next();
         if(!itm.done) {
-            return this(itm.value).then(()=> {
+            return Promise.resolve(this(itm.value)).then(()=> {
                 return chain.call(this, iter);
             });
         }
+        return Promise.resolve();
+    };
+}
+
+if(!Array.prototype.chain) {
+    Array.prototype.chain = function chain(fnc, i=0) {
+        let itm = this[i];
+        if(itm) {
+            return Promise.resolve(fnc(itm)).then(()=> {
+                return chain.call(this, fnc, i+1);
+            });
+        }
+        return Promise.resolve();
     };
 }
 
@@ -47,7 +60,7 @@ var classes = (()=> {
             'itemYourMaxBid'
         ];
 
-        static get observedAttributes() { return ['src', 'data-refresh-rate']; }
+        static get observedAttributes() { return ['src', 'data-refresh-rate', 'data-auto-refresh']; }
 
         refreshIntervalId = 0;
         refreshRate = AuctionItemRow.DEFAULT_REFRESH_RATE_MS;
@@ -59,6 +72,7 @@ var classes = (()=> {
                 templateContent = template.content;
 
             this.appendChild(templateContent.cloneNode(true));
+            this.addEventListener('refresh', this._onRefresh.bind(this));
         }
 
         attributeChangedCallback(name, oldValue, newValue) {
@@ -69,8 +83,10 @@ var classes = (()=> {
                         .then((data)=> {
                             this._setLinksAndImages(data);
                             this._update(data);
-                            this._stopRefresh();
-                            this._startRefresh();
+                            if(this.getAttribute('data-auto-refresh') !== null) {
+                                this._stopRefresh();
+                                this._startRefresh();
+                            }
                         })
                         .then(()=> {
                             this.dispatchEvent(new CustomEvent('update-end', {}));
@@ -85,6 +101,15 @@ var classes = (()=> {
                     this.refreshRate =  (parseInt(newValue) || 0) * 1000 || AuctionItemRow.DEFAULT_REFRESH_RATE_MS;
                     this._stopRefresh();
                     this._startRefresh();
+                    break;
+
+                case 'data-auto-refresh':
+                    if(newValue !== null) {
+                        this._stopRefresh();
+                        this._startRefresh();
+                    }else {
+                        this._stopRefresh();
+                    }
                     break;
             }
         }
@@ -171,6 +196,10 @@ var classes = (()=> {
             return AuctionItemRow.CHANGE_WATCH_PROPS.reduce((acc, prop)=> {
                 return acc || oldData[prop] !== newData[prop];
             }, false);
+        }
+
+        _onRefresh() {
+            this._refresh();
         }
 
         static requestItemInfo(url) {
@@ -492,17 +521,15 @@ var classes = (()=> {
             refreshRate = rate;
             let rows = document.querySelectorAll(`table#${DATA_TABLE_ID} tr`);
             if(rows) {
-                ((tr)=> {
-                    return ((tr)=>{
-                        tr.setAttribute('data-refresh-rate', rate);
-                    }).delay(1000, tr);
-                }).chain(rows[Symbol.iterator]());
+                rows.chain(((tr)=>{
+                    tr.setAttribute('data-refresh-rate', rate);
+                }).delay(1000));
             }
         }
     });
     AuctionItemRow.__register();
 
-    insertRow.chain(items[Symbol.iterator]()).catch(console.error);
+    items.chain(insertRow).catch(console.error);
 
     function insertRow(url) {
         let tbodyElem = document.body.querySelector('table > tbody'),
