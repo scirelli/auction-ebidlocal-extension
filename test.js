@@ -7,10 +7,35 @@ if(!String.prototype.mustache) {
     };
 }
 
+if(!Function.prototype.delay) {
+    Function.prototype.delay = function delay(time) {
+        let args = Array.prototype.slice.call(arguments, 1);
+
+        time = parseInt(time) || 0;
+
+        return new Promise((resolve)=> {
+            setTimeout((...args)=> {
+                resolve(this.apply(this, args));
+            }, time, ...args);
+        });
+    };
+}
+
+if(!Function.prototype.chain) {
+    Function.prototype.chain = function chain(iter) {
+        let itm = iter.next();
+        if(!itm.done) {
+            return this(itm.value).then(()=> {
+                return chain.call(this, iter);
+            });
+        }
+    };
+}
+
 var classes = (()=> {
     class AuctionItemRow extends HTMLTableRowElement{
         static TAG_NAME = 'auction-item-row';
-        static REFRESH_RATE_MS = 10 * 1000;
+        static DEFAULT_REFRESH_RATE_MS = 10 * 1000;
         static DATA_TABLE_ID = 'DataTable';
         static CHANGE_WATCH_PROPS = [
             'itemNumOfBids',
@@ -21,9 +46,10 @@ var classes = (()=> {
             'itemYourMaxBid'
         ];
 
-        static get observedAttributes() { return ['src']; }
+        static get observedAttributes() { return ['src', 'data-refresh-rate']; }
 
         refreshIntervalId = 0;
+        refreshRate = AuctionItemRow.DEFAULT_REFRESH_RATE_MS;
         oldDatat;
 
         constructor() {
@@ -35,22 +61,40 @@ var classes = (()=> {
         }
 
         attributeChangedCallback(name, oldValue, newValue) {
-            console.log(`Custom ${name} element attributes changed. ${newValue}`);
-
-            AuctionItemRow.requestItemInfo(new URL(newValue))
-                .then((data)=> {
-                    this._setLinksAndImages(data);
-                    this._update(data);
+            switch(name) {
+                case 'src':
+                    this.dispatchEvent(new CustomEvent('update-start', {}));
+                    AuctionItemRow.requestItemInfo(new URL(newValue))
+                        .then((data)=> {
+                            this._setLinksAndImages(data);
+                            this._update(data);
+                            this._stopRefresh();
+                            this._startRefresh();
+                        })
+                        .then(()=> {
+                            this.dispatchEvent(new CustomEvent('update-end', {}));
+                        })
+                        .catch(e=> {
+                            console.error(e);
+                            this.dispatchEvent(new CustomEvent('update-end', {}));
+                            this.remove();
+                        });
+                    break;
+                case 'data-refresh-rate':
+                    this.refreshRate =  (parseInt(newValue) || 0) * 1000 || AuctionItemRow.DEFAULT_REFRESH_RATE_MS;
                     this._stopRefresh();
                     this._startRefresh();
-                });
+                    break;
+            }
         }
 
         _startRefresh() {
-            this.refreshIntervalId = setInterval(this._refresh.bind(this), AuctionItemRow.REFRESH_RATE_MS);
+            this.refreshIntervalId = setTimeout(()=> {
+                this._refresh().then(this._startRefresh.bind(this));
+            }, this.refreshRate);
         }
         _stopRefresh() {
-            clearInterval(this.refreshIntervalId);
+            clearTimeout(this.refreshIntervalId);
             this.refreshIntervalId = 0;
         }
 
@@ -65,6 +109,7 @@ var classes = (()=> {
                 .then((data)=>{
                     if(this._hasDataChanged(this.oldData, data)) {
                         this._update(data);
+                        this.dispatchEvent(new Event('change'));
                     }
                 })
                 .then(done)
@@ -117,7 +162,6 @@ var classes = (()=> {
             yourMaxBidElem.textContent = allData.itemYourMaxBid;
 
             this.oldData = newData;
-            this.dispatchEvent(new Event('change'));
         }
 
         _hasDataChanged(oldData, newData) {
@@ -364,11 +408,12 @@ var classes = (()=> {
     const DATA_TABLE_ID = 'DataTable';
 
     let items = [
-            new URL('https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12'),
-            new URL('https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/27'),
-            new URL('https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/57'),
-            new URL('https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples427/7376')
-        ],
+            'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12',
+            'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/27',
+            'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/57',
+            'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples427/7376',
+            'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples414/1068', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples414/1076', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/665', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/677', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/730', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/652', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/698', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/651', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/403 ', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/407', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/408', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/411', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/423', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/424', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/452', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/461', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/523', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/527', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/531', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/553', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/239', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/137', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/142', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/119', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/120', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/70', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/53', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/33', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1079', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1062', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1028', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1015', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1220', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1270', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1274', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/2500', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/242', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/245', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/32', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/24', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/118', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2027/3', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2074', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2034', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2263', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/37', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/144', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/155', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/158', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/312', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/457', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/472', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/2', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/6', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/13', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples427/7760', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/757', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/757', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/425', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/509', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/529', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/27', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/57', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1149'
+        ].map(l=>{return new URL(l);}),
         tableTemplate = `
         <style>
             table {
@@ -397,6 +442,10 @@ var classes = (()=> {
             }
 
             tbody tr.updating {
+                background-color: #DDFFDD;
+                transition: background-color 0.2s ease-out;
+            }
+            tbody tr.changed {
                 background-color: #FFDDFF;
                 transition: background-color 0.2s ease-out;
             }
@@ -404,6 +453,11 @@ var classes = (()=> {
                 transition: background-color 0.2s ease-out;
             }
         </style>
+        <form id="refreshRateForm" action="#">
+            <label for="refreshRate">Refresh rate:</label>
+            <input type="number" min="1" max="10" name="refreshRate" value="10"/>
+            <input type="submit" value="Set"/>
+        </form>
         <table id="{{tableID}}" class="listbody" cellpadding="3" cellspacing="1">
             <thead>
                 <tr bgcolor="#073c68" valign="bottom">
@@ -420,31 +474,58 @@ var classes = (()=> {
             </thead>
             <tbody></tbody>
         </table>
-        `;
+        `,
+        refreshRate = AuctionItemRow.DEFAULT_REFRESH_RATE_MS/1000;
 
     window.RefreshBids = ()=>{};
     window.ResetCounter = ()=>{};
     document.title = 'Watch List: ' + document.title;
     document.body.innerHTML = tableTemplate.mustache({tableID: DATA_TABLE_ID});
+    document.body.querySelector('form#refreshRateForm').addEventListener('submit', (evt)=> {
+        evt.preventDefault();
+        evt.stopPropagation();
+        let rate = parseInt(evt.currentTarget.querySelector('input[name="refreshRate"]').value) || refreshRate;
+
+        if(rate !== refreshRate) {
+            refreshRate = rate;
+            let rows = document.querySelectorAll(`table#${DATA_TABLE_ID} tr`);
+            if(rows) {
+                ((tr)=> {
+                    return ((tr)=>{
+                        tr.setAttribute('data-refresh-rate', rate);
+                    }).delay(1000, tr);
+                }).chain(rows[Symbol.iterator]());
+            }
+        }
+    });
     AuctionItemRow.__register();
-    items.forEach(insertRow);
+
+    insertRow.chain(items[Symbol.iterator]()).catch(console.error);
 
     function insertRow(url) {
         let tbodyElem = document.body.querySelector('table > tbody'),
-            oData = {data: AuctionItemRow.getAuctionIdFromURL(url), sourceURL: url};
+            oData = {data: AuctionItemRow.getAuctionIdFromURL(url), sourceURL: url},
+            id = oData.data.fullId;
 
-        if(!tbodyElem.querySelector(`tr[id="${oData.fullId}"]`)) {
-            createRow();
+        if(!tbodyElem.querySelector(`tr[id="${id}"]`)) {
+            return createRow();
         }
+
+        return Promise.resolve();
 
         function createRow() {
             let newRow = document.createElement('tr', {is: AuctionItemRow.TAG_NAME});
+
             newRow.setAttribute('src', oData.sourceURL);
             newRow.classList.add('DataRow');
             newRow.setAttribute('valign', 'top');
-            newRow.setAttribute('id', oData.fullId);
+            newRow.setAttribute('id', id);
             newRow.addEventListener('change', ()=> {
-                console.log('Change event recieved');
+                newRow.classList.add('changed');
+                newRow.addEventListener('mouseenter', function onHover() {
+                    newRow.classList.remove('changed');
+                    newRow.removeEventListener('hover', onHover);
+                });
             });
             newRow.addEventListener('update-start', ()=> {
                 newRow.classList.add('updating');
@@ -454,7 +535,12 @@ var classes = (()=> {
             });
 
             tbodyElem.appendChild(newRow);
-            return newRow;
+            return new Promise((resolve)=> {
+                newRow.addEventListener('update-end', function doNext() {
+                    resolve(newRow);
+                    newRow.removeEventListener('update-end', doNext);
+                });
+            });
         }
     }
 })(classes.AuctionItemRow, classes.Auction, classes.AuctionItem);
