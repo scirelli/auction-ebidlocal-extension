@@ -361,9 +361,7 @@ var classes = (()=> {
 })();
 
 ((AuctionItemRow /*,Auction, AuctionItem*/)=> {
-    const //PAGE_ORIGIN = new URL(window.location.href).origin,
-        //ITEM_LINK = new URL('/cgi-bin/mmlist.cgi', PAGE_ORIGIN),
-        DATA_TABLE_ID = 'DataTable';
+    const DATA_TABLE_ID = 'DataTable';
 
     let items = [
             new URL('https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12'),
@@ -423,22 +421,6 @@ var classes = (()=> {
             <tbody></tbody>
         </table>
         `;
-    // ,rowTemplate = `
-    //    <td class="item"><a target="_blank" href="/cgi-bin/mmlist.cgi?{{auctionId}}/{{itemId}}">{{itemId}}</a></td>
-    //    <td align="center" class="photo">
-    //        <a target="_blank" href="/cgi-bin/mmlist.cgi?{{auctionId}}/{{itemId}}">
-    //            <img src="{{itemIcon}}"/>
-    //            <img class="icon-large" src="{{itemIcon}}"/>
-    //        </a>
-    //    </td>
-    //    <td class="description">{{itemDescription}}</td>
-    //    <td align="right" class="bids"><a  target="_blank" href="/cgi-bin/mmhistory.cgi?{{auctionId}}/{{itemId}}"><span id="{{itemId}}_bids">{{itemNumOfBids}}</span></a></td>
-    //    <td align="right" class="highbidder"><span id="{{itemId}}_highbidder">{{itemHighBidder}}</span></td>
-    //    <td align="right" class="currentamount"><span id="{{itemId}}_currentprice">{{itemCurrentAmount}}</span></td>
-    //    <td align="right" class="nextbidrequired"><span id="{{itemId}}_nextrequired">{{itemNextBidRequired}}</span></td>
-    //    <td align="right" class="yourbid"><span id="{{itemId}_yourbid">{{itemYourBid}}</span></td>
-    //    <td align="center" class="yourmaximum"><span id="{{auctionNum}}_yourmax">{{itemYourMaxBid}}</span></td>
-    // `;
 
     window.RefreshBids = ()=>{};
     window.ResetCounter = ()=>{};
@@ -465,143 +447,14 @@ var classes = (()=> {
                 console.log('Change event recieved');
             });
             newRow.addEventListener('update-start', ()=> {
-                console.log('Update start event recieved');
+                newRow.classList.add('updating');
             });
             newRow.addEventListener('update-end', ()=> {
-                console.log('Update end event recieved');
+                newRow.classList.remove('updating');
             });
 
             tbodyElem.appendChild(newRow);
             return newRow;
         }
     }
-
-    // function test1(n) {
-    //     let url = items[n];
-    //     return request(url)
-    //         .then((req)=>{
-    //             let div = document.createElement('div');
-    //             div.innerHTML = req.responseText;
-    //             return div;
-    //         })
-    //         .then((elem)=> {
-    //             let actionInfo = getAuctionIdFromURL(url),
-    //                 getBidsURL = buildGetBidsURL(actionInfo);
-
-    //             return {elem: elem, infoURL: getBidsURL, actionInfo: actionInfo, sourceURL: url};
-    //         });
-    // }
-
-
-
-    // function requestItemInfo(url) {
-    //     return request(url)
-    //         .then((req)=>{
-    //             let div = document.createElement('div');
-    //             div.innerHTML = req.responseText;
-    //             return div;
-    //         })
-    //         .then(getAllInfoFromElem);
-    // }
-
-    // function getAllInfoFromElem(elem) {
-    //     let table = elem.querySelector(`table#${DATA_TABLE_ID}`),
-    //         trData = table.querySelector('tbody > tr:first-child'),
-
-    //         client = elem.querySelector('input[name="client"]') || {},
-    //         auction = elem.querySelector('input[name="auction"]') || {},
-    //         contents = elem.querySelector('input[name="contents"]') || {},
-    //         icon     = trData.querySelector('td.photo img') || {},
-    //         description = trData.querySelector('td.description') || {},
-    //         bids        = trData.querySelector('td.bids') || {},
-    //         highbidder = trData.querySelector('td.highbidder') || {},
-    //         currentAmount = trData.querySelector('td.currentamount') || {},
-    //         nextBidRequired = trData.querySelector('td.nextbidrequired') || {},
-    //         yourBid         = trData.querySelector('td.yourbid') || {},
-    //         yourMaxBid      = trData.querySelector('td.yourmaximum') || {},
-
-    //         itemId = (contents.value || '').replace('/', ''),  //contents
-    //         itemIcon = icon.src || '',
-    //         itemDescription = (description.textContent || '').trim(),
-    //         itemNumOfBids = (bids.textContent || '').trim(),
-    //         itemHighBidder = (highbidder.textContent || '').trim(),
-    //         itemCurrentAmount = (currentAmount.textContent || '').trim(),
-    //         itemNextBidRequired = (nextBidRequired.textContent || '').trim(),
-    //         itemYourBid = (yourBid.textContent || '').trim(),
-    //         itemYourMaxBid = (yourMaxBid.textContent || '').trim(),
-    //         auctionId = auction.value || '',  //event
-    //         auctionName = client.value || '', //c
-    //         auctionNum = Auction.AUCTIONID_ID_REG.exec(auctionId + '/' + itemId);
-
-    //     return {
-    //         elem:        elem,
-    //         auctionInfo: {
-    //             auction: new Auction(auctionName, auctionNum, auctionId), //c, , event
-    //             item:    new AuctionItem({
-    //                 itemId,
-    //                 itemIcon,
-    //                 itemDescription,
-    //                 itemNumOfBids,
-    //                 itemHighBidder,
-    //                 itemCurrentAmount,
-    //                 itemNextBidRequired,
-    //                 itemYourBid,
-    //                 itemYourMaxBid
-    //             })
-    //         }
-    //     };
-    // }
-
-    // function getAuctionIdFromURL(url) {
-    //     let fullID = Auction.AUCTIONID_ID_REG.exec(url.search),
-    //         client = '',
-    //         auctionId = '',
-    //         itemId = '',
-    //         auctionNum = '';
-
-    //     if(fullID) {
-    //         client = fullID[Auction.CLIENT] || '';
-    //         auctionId = fullID[Auction.AUCTION_ID] || '';
-    //         itemId = fullID[Auction.ITEM_ID] || '';
-    //         auctionNum = fullID[Auction.AUCTION_NUM] || '';
-    //     }
-
-    //     return {
-    //         c:          client,
-    //         event:      auctionId,
-    //         contents:   itemId,
-    //         auctionNum: auctionNum
-    //     };
-    // }
-    // function buildGetBidsURL(actionInfo) {
-    //     let getBidsURL = new URL('/cgi-bin/v6.cgi', PAGE_ORIGIN);
-    //     actionInfo['a'] = 'getBids';
-    //     for (let p in actionInfo) {
-    //         getBidsURL.searchParams.append(p, actionInfo[p]);
-    //     }
-    //     return getBidsURL;
-    // }
-
-    // function request(url) {
-    //     const oReq = new XMLHttpRequest();
-
-    //     return new Promise((resolve, reject)=> {
-    //         oReq.open('GET', url, true);
-    //         oReq.addEventListener('load', success);
-    //         oReq.addEventListener('error', fail);
-    //         oReq.addEventListener('abort', fail);
-    //         oReq.addEventListener('timeout', fail);
-    //         oReq.send();
-
-    //         function fail(evt) {
-    //             reject(oReq, evt);
-    //         }
-    //         function success(evt) {
-    //             if( oReq.getResponseHeader('content-type').indexOf('application/json') !== -1) {
-    //                 oReq.responseJSON = JSON.parse(oReq.responseText);
-    //             }
-    //             resolve(oReq, evt);
-    //         }
-    //     });
-    // }
 })(classes.AuctionItemRow, classes.Auction, classes.AuctionItem);
