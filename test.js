@@ -1,3 +1,4 @@
+//TODO: Make the table a custom component that handles coordinating updates of the rows.
 if(!String.prototype.mustache) {
     String.prototype.mustache = function(o) {
         return this.replace(/{{([^{}]*)}}/g, function(a, b) {
@@ -417,6 +418,7 @@ var classes = (()=> {
         tableTemplate = `
         <style>
             table {
+                width:unset;
                 margin:4px;
             }
             td.photo a {
