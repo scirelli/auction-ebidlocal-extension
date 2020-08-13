@@ -10,14 +10,188 @@ if(!String.prototype.mustache) {
 var classes = (()=> {
     class AuctionItemRow extends HTMLTableRowElement{
         static TAG_NAME = 'auction-item-row';
+        static REFRESH_RATE_MS = 10 * 1000;
+        static DATA_TABLE_ID = 'DataTable';
+
+        refreshIntervalId = 0;
 
         constructor() {
             super();
+            let template = document.getElementById('auction-item-row-template'),
+                templateContent = template.content;
+
+            this.appendChild(templateContent.cloneNode(true));
+
+            //this.startRefresh();
+        }
+
+        startRefresh() {
+            this.refreshIntervalId = setInterval(this.refresh.bind(this), this.REFRESH_RATE_MS);
+        }
+
+        refresh() {
+            let src = this.getAttribute('src'),
+                updateStartEvent = new CustomEvent('update-start', {}),
+                updateEndEvent = new CustomEvent('update-end', {});
+
+            if(!src) return;
+
+            this.dispatchEvent(updateStartEvent);
+            AuctionItemRow.requestItemInfo(new URL(src))
+                .then((data)=>{
+                    console.log(src);
+                    console.log(data);
+                    this.update(data);
+                })
+                .then(()=> {
+                    done();
+                })
+                .catch(()=> {
+                    done();
+                });
+
+            function done() {
+                this.dispatchEvent(updateEndEvent);
+            }
+        }
+
+        update(newData) {
+            let changeEvent = new Event('change');
+            //this.dispatchEvent(changeEvent);
+        }
+
+        static requestItemInfo(url) {
+            return AuctionItemRow.request(url)
+                .then((req)=>{
+                    let div = document.createElement('div');
+                    div.innerHTML = req.responseText;
+                    return div;
+                })
+                .then(AuctionItemRow.getAllInfoFromElem);
+        }
+
+        static getAllInfoFromElem(elem) {
+            let table = elem.querySelector(`table#${AuctionItemRow.DATA_TABLE_ID}`),
+                trData = table.querySelector('tbody > tr:first-child'),
+
+                client = elem.querySelector('input[name="client"]') || {},
+                auction = elem.querySelector('input[name="auction"]') || {},
+                contents = elem.querySelector('input[name="contents"]') || {},
+                icon     = trData.querySelector('td.photo img') || {},
+                description = trData.querySelector('td.description') || {},
+                bids        = trData.querySelector('td.bids') || {},
+                highbidder = trData.querySelector('td.highbidder') || {},
+                currentAmount = trData.querySelector('td.currentamount') || {},
+                nextBidRequired = trData.querySelector('td.nextbidrequired') || {},
+                yourBid         = trData.querySelector('td.yourbid') || {},
+                yourMaxBid      = trData.querySelector('td.yourmaximum') || {},
+
+                itemId = (contents.value || '').replace('/', ''),  //contents
+                itemIcon = icon.src || '',
+                itemDescription = (description.textContent || '').trim(),
+                itemNumOfBids = (bids.textContent || '').trim(),
+                itemHighBidder = (highbidder.textContent || '').trim(),
+                itemCurrentAmount = (currentAmount.textContent || '').trim(),
+                itemNextBidRequired = (nextBidRequired.textContent || '').trim(),
+                itemYourBid = (yourBid.textContent || '').trim(),
+                itemYourMaxBid = (yourMaxBid.textContent || '').trim(),
+                auctionId = auction.value || '',  //event
+                auctionName = client.value || '', //c
+                auctionNum = Auction.AUCTIONID_ID_REG.exec(auctionId + '/' + itemId);
+
+            return {
+                elem:        elem,
+                auctionInfo: {
+                    auction: new Auction(auctionName, auctionNum, auctionId), //c, , event
+                    item:    new AuctionItem({
+                        itemId,
+                        itemIcon,
+                        itemDescription,
+                        itemNumOfBids,
+                        itemHighBidder,
+                        itemCurrentAmount,
+                        itemNextBidRequired,
+                        itemYourBid,
+                        itemYourMaxBid
+                    })
+                }
+            };
+        }
+
+        static getAuctionIdFromURL(url) {
+            let fullID = Auction.AUCTIONID_ID_REG.exec(url.search),
+                client = '',
+                auctionId = '',
+                itemId = '',
+                auctionNum = '';
+
+            if(fullID) {
+                client = fullID[Auction.CLIENT] || '';
+                auctionId = fullID[Auction.AUCTION_ID] || '';
+                itemId = fullID[Auction.ITEM_ID] || '';
+                auctionNum = fullID[Auction.AUCTION_NUM] || '';
+            }
+
+            return {
+                c:          client,
+                event:      auctionId,
+                contents:   itemId,
+                auctionNum: auctionNum
+            };
+        }
+
+        static request(url) {
+            const oReq = new XMLHttpRequest();
+
+            return new Promise((resolve, reject)=> {
+                oReq.open('GET', url, true);
+                oReq.addEventListener('load', success);
+                oReq.addEventListener('error', fail);
+                oReq.addEventListener('abort', fail);
+                oReq.addEventListener('timeout', fail);
+                oReq.send();
+
+                function fail(evt) {
+                    reject(oReq, evt);
+                }
+                function success(evt) {
+                    if( oReq.getResponseHeader('content-type').indexOf('application/json') !== -1) {
+                        oReq.responseJSON = JSON.parse(oReq.responseText);
+                    }
+                    resolve(oReq, evt);
+                }
+            });
         }
 
         static __register() {
             customElements.define(AuctionItemRow.TAG_NAME, AuctionItemRow, {extends: 'tr'});
+            document.body.insertAdjacentHTML('beforeend', AuctionItemRow.rowTemplate);
+            document.body.insertAdjacentHTML('beforeend', AuctionItemRow.styles);
         }
+
+        static rowTemplate = `
+            <template id="auction-item-row-template">
+               <td class="item"><a target="_blank" href="#">###</a></td>
+               <td align="center" class="photo">
+                   <a target="_blank" href="#">
+                       <img src="" alt="no image"/>
+                       <img class="icon-large" src=""/>
+                   </a>
+               </td>
+               <td class="description">XYZ</td>
+               <td align="right" class="bids"><a target="_blank" href=""><span>##</span></a></td>
+               <td align="right" class="highbidder"><span>Empty</span></td>
+               <td align="right" class="currentamount"><span>#.##</span></td>
+               <td align="right" class="nextbidrequired"><span>#.##</span></td>
+               <td align="right" class="yourbid"><span>#.##</span></td>
+               <td align="center" class="yourmaximum"><span>#.##</span></td>
+           </template>
+       `;
+
+        static styles = `
+            <style>
+            </style>
+        `;
     }
 
     class Auction{
@@ -121,8 +295,6 @@ var classes = (()=> {
         //ITEM_LINK = new URL('/cgi-bin/mmlist.cgi', PAGE_ORIGIN),
         DATA_TABLE_ID = 'DataTable';
 
-    AuctionItemRow.__register();
-
     let items = [
             new URL('https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12'),
             new URL('https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/27'),
@@ -199,8 +371,10 @@ var classes = (()=> {
        `;
 
     window.RefreshBids = ()=>{};
+    window.ResetCounter = ()=>{};
     document.title = 'Watch List: ' + document.title;
     document.body.innerHTML = tableTemplate.mustache({tableID: DATA_TABLE_ID});
+    AuctionItemRow.__register();
     items.forEach(itm=>test(itm).then(insertRow));
 
     function test(url) {
@@ -218,22 +392,14 @@ var classes = (()=> {
             createRow();
         }
 
-        update();
-
         function createRow() {
             let newRow = document.createElement('tr', {is: AuctionItemRow.TAG_NAME});
-            //src="{{src}}" class="DataRow" id="{{itemId}}" valign="top"
             newRow.setAttribute('src', oData.sourceURL);
             newRow.classList.add('DataRow');
-            newRow.setAttribute('id', oData.data.auctionInfo.item.itemId);
             newRow.setAttribute('valign', 'top');
-            newRow.innerHTML = rowTemplate.mustache({...oData.data.auctionInfo.item, ...oData.data.auctionInfo.auction});
 
             tbodyElem.appendChild(newRow);
             return newRow;
-        }
-        function update() {
-            //TODO: After creation start updates. Done in component
         }
     }
 
