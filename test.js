@@ -12,8 +12,19 @@ var classes = (()=> {
         static TAG_NAME = 'auction-item-row';
         static REFRESH_RATE_MS = 10 * 1000;
         static DATA_TABLE_ID = 'DataTable';
+        static CHANGE_WATCH_PROPS = [
+            'itemNumOfBids',
+            'itemHighBidder',
+            'itemCurrentAmount',
+            'itemNextBidRequired',
+            'itemYourBid',
+            'itemYourMaxBid'
+        ];
+
+        static get observedAttributes() { return ['src']; }
 
         refreshIntervalId = 0;
+        oldDatat;
 
         constructor() {
             super();
@@ -21,43 +32,100 @@ var classes = (()=> {
                 templateContent = template.content;
 
             this.appendChild(templateContent.cloneNode(true));
-
-            //this.startRefresh();
         }
 
-        startRefresh() {
-            this.refreshIntervalId = setInterval(this.refresh.bind(this), this.REFRESH_RATE_MS);
-        }
+        attributeChangedCallback(name, oldValue, newValue) {
+            console.log(`Custom ${name} element attributes changed. ${newValue}`);
 
-        refresh() {
-            let src = this.getAttribute('src'),
-                updateStartEvent = new CustomEvent('update-start', {}),
-                updateEndEvent = new CustomEvent('update-end', {});
-
-            if(!src) return;
-
-            this.dispatchEvent(updateStartEvent);
-            AuctionItemRow.requestItemInfo(new URL(src))
-                .then((data)=>{
-                    console.log(src);
-                    console.log(data);
-                    this.update(data);
-                })
-                .then(()=> {
-                    done();
-                })
-                .catch(()=> {
-                    done();
+            AuctionItemRow.requestItemInfo(new URL(newValue))
+                .then((data)=> {
+                    this._setLinksAndImages(data);
+                    this._update(data);
+                    this._stopRefresh();
+                    this._startRefresh();
                 });
+        }
 
-            function done() {
-                this.dispatchEvent(updateEndEvent);
+        _startRefresh() {
+            this.refreshIntervalId = setInterval(this._refresh.bind(this), AuctionItemRow.REFRESH_RATE_MS);
+        }
+        _stopRefresh() {
+            clearInterval(this.refreshIntervalId);
+            this.refreshIntervalId = 0;
+        }
+
+        _refresh() {
+            let self = this,
+                src = this.getAttribute('src');
+
+            if(!src) return Promise.resolve();
+
+            this.dispatchEvent(new CustomEvent('update-start', {}));
+            return AuctionItemRow.requestItemInfo(new URL(src))
+                .then((data)=>{
+                    if(this._hasDataChanged(this.oldData, data)) {
+                        this._update(data);
+                    }
+                })
+                .then(done)
+                .catch(done);
+
+            function done(m) {
+                if(m) console.error(m);
+                self.dispatchEvent(new CustomEvent('update-end', {}));
             }
         }
 
-        update(newData) {
-            let changeEvent = new Event('change');
-            //this.dispatchEvent(changeEvent);
+        _setLinksAndImages(data) {
+            let itemElem = this.querySelector('.item a'),
+                photoAnchorElem = this.querySelector('.photo a'),
+                photoIconElem = this.querySelector('.photo a img.icon-small'),
+                photoIconLargeElem = this.querySelector('.photo a img.icon-large'),
+                bidsAnchorElem = this.querySelector('.bids a'),
+                auction = data.auctionInfo.auction,
+                item = data.auctionInfo.item,
+                allData = {...item, ...auction};
+
+            itemElem.setAttribute('href', '/cgi-bin/mmlist.cgi?{{auctionId}}/{{itemId}}'.mustache(allData));
+            photoAnchorElem.setAttribute('href', '/cgi-bin/mmlist.cgi?{{auctionId}}/{{itemId}}'.mustache(allData));
+            photoIconElem.setAttribute('src', item.itemIcon);
+            photoIconLargeElem.setAttribute('src', item.itemIcon);
+            bidsAnchorElem.setAttribute('href', 'cgi-bin/mmhistory.cgi?{{auctionId}}/{{itemId}}'.mustache(allData));
+        }
+
+        _update(newData) {
+            let itemElem = this.querySelector('.item a'),
+                descriptionElem = this.querySelector('.description'),
+                bidsElem = this.querySelector('.bids a span'),
+                highBiddersElem = this.querySelector('.highbidder span'),
+                currentAmountElem = this.querySelector('.currentamount span'),
+                nextBidRequiredElem = this.querySelector('.nextbidrequired span'),
+                yourBidElem = this.querySelector('.yourbid span'),
+                yourMaxBidElem = this.querySelector('.yourmaximum span'),
+
+                auction = newData.auctionInfo.auction,
+                item = newData.auctionInfo.item,
+                allData = {...item, ...auction};
+
+            itemElem.textContent = allData.itemId;
+            descriptionElem.textContent = item.itemDescription;
+            bidsElem.textContent = allData.itemNumOfBids;
+            highBiddersElem.textContent = allData.itemHighBidder;
+            currentAmountElem.textContent = allData.itemCurrentAmount;
+            nextBidRequiredElem.textContent = allData.itemNextBidRequired;
+            yourBidElem.textContent = allData.itemYourBid;
+            yourMaxBidElem.textContent = allData.itemYourMaxBid;
+
+            this.oldData = newData;
+            this.dispatchEvent(new Event('change'));
+        }
+
+        _hasDataChanged(oldData, newData) {
+            if(!oldData || !newData) return true;
+
+            return AuctionItemRow.CHANGE_WATCH_PROPS.reduce((acc, prop)=> {
+                return acc || oldData[prop] !== newData[prop];
+            }, false);
         }
 
         static requestItemInfo(url) {
@@ -136,7 +204,8 @@ var classes = (()=> {
                 c:          client,
                 event:      auctionId,
                 contents:   itemId,
-                auctionNum: auctionNum
+                auctionNum: auctionNum,
+                fullId:     fullID[Auction.FULL_ID]
             };
         }
 
@@ -172,19 +241,19 @@ var classes = (()=> {
         static rowTemplate = `
             <template id="auction-item-row-template">
                <td class="item"><a target="_blank" href="#">###</a></td>
-               <td align="center" class="photo">
+               <td class="photo" align="center">
                    <a target="_blank" href="#">
-                       <img src="" alt="no image"/>
+                       <img class="icon-small" src="" alt="no image"/>
                        <img class="icon-large" src=""/>
                    </a>
                </td>
-               <td class="description">XYZ</td>
-               <td align="right" class="bids"><a target="_blank" href=""><span>##</span></a></td>
-               <td align="right" class="highbidder"><span>Empty</span></td>
-               <td align="right" class="currentamount"><span>#.##</span></td>
-               <td align="right" class="nextbidrequired"><span>#.##</span></td>
-               <td align="right" class="yourbid"><span>#.##</span></td>
-               <td align="center" class="yourmaximum"><span>#.##</span></td>
+               <td class="description"                  >XYZ</td>
+               <td class="bids"            align="right"><a target="_blank" href=""><span>##</span></a></td>
+               <td class="highbidder"      align="right"><span>Empty</span></td>
+               <td class="currentamount"   align="right"><span>#.##</span></td>
+               <td class="nextbidrequired" align="right"><span>#.##</span></td>
+               <td class="yourbid"         align="right"><span>#.##</span></td>
+               <td class="yourmaximum"     align="center"><span>#.##</span></td>
            </template>
        `;
 
@@ -196,8 +265,9 @@ var classes = (()=> {
 
     class Auction{
         static AUCTIONID_ID_REG = /(([a-zA-Z]+)([0-9]+))\/([0-9]+)/;
-        static CLIENT = 2;
+        static FULL_ID = 0;
         static AUCTION_ID = 1;
+        static CLIENT = 2;
         static AUCTION_NUM = 3;
         static ITEM_ID = 4;
 
@@ -290,7 +360,7 @@ var classes = (()=> {
     return {AuctionItemRow, Auction, AuctionItem};
 })();
 
-((AuctionItemRow, Auction, AuctionItem)=> {
+((AuctionItemRow /*,Auction, AuctionItem*/)=> {
     const //PAGE_ORIGIN = new URL(window.location.href).origin,
         //ITEM_LINK = new URL('/cgi-bin/mmlist.cgi', PAGE_ORIGIN),
         DATA_TABLE_ID = 'DataTable';
@@ -352,43 +422,36 @@ var classes = (()=> {
             </thead>
             <tbody></tbody>
         </table>
-        `,
-        rowTemplate = `
-           <td class="item"><a target="_blank" href="/cgi-bin/mmlist.cgi?{{auctionId}}/{{itemId}}">{{itemId}}</a></td>
-           <td align="center" class="photo">
-               <a target="_blank" href="/cgi-bin/mmlist.cgi?{{auctionId}}/{{itemId}}">
-                   <img src="{{itemIcon}}"/>
-                   <img class="icon-large" src="{{itemIcon}}"/>
-               </a>
-           </td>
-           <td class="description">{{itemDescription}}</td>
-           <td align="right" class="bids"><a  target="_blank" href="/cgi-bin/mmhistory.cgi?{{auctionId}}/{{itemId}}"><span id="{{itemId}}_bids">{{itemNumOfBids}}</span></a></td>
-           <td align="right" class="highbidder"><span id="{{itemId}}_highbidder">{{itemHighBidder}}</span></td>
-           <td align="right" class="currentamount"><span id="{{itemId}}_currentprice">{{itemCurrentAmount}}</span></td>
-           <td align="right" class="nextbidrequired"><span id="{{itemId}}_nextrequired">{{itemNextBidRequired}}</span></td>
-           <td align="right" class="yourbid"><span id="{{itemId}_yourbid">{{itemYourBid}}</span></td>
-           <td align="center" class="yourmaximum"><span id="{{auctionNum}}_yourmax">{{itemYourMaxBid}}</span></td>
-       `;
+        `;
+    // ,rowTemplate = `
+    //    <td class="item"><a target="_blank" href="/cgi-bin/mmlist.cgi?{{auctionId}}/{{itemId}}">{{itemId}}</a></td>
+    //    <td align="center" class="photo">
+    //        <a target="_blank" href="/cgi-bin/mmlist.cgi?{{auctionId}}/{{itemId}}">
+    //            <img src="{{itemIcon}}"/>
+    //            <img class="icon-large" src="{{itemIcon}}"/>
+    //        </a>
+    //    </td>
+    //    <td class="description">{{itemDescription}}</td>
+    //    <td align="right" class="bids"><a  target="_blank" href="/cgi-bin/mmhistory.cgi?{{auctionId}}/{{itemId}}"><span id="{{itemId}}_bids">{{itemNumOfBids}}</span></a></td>
+    //    <td align="right" class="highbidder"><span id="{{itemId}}_highbidder">{{itemHighBidder}}</span></td>
+    //    <td align="right" class="currentamount"><span id="{{itemId}}_currentprice">{{itemCurrentAmount}}</span></td>
+    //    <td align="right" class="nextbidrequired"><span id="{{itemId}}_nextrequired">{{itemNextBidRequired}}</span></td>
+    //    <td align="right" class="yourbid"><span id="{{itemId}_yourbid">{{itemYourBid}}</span></td>
+    //    <td align="center" class="yourmaximum"><span id="{{auctionNum}}_yourmax">{{itemYourMaxBid}}</span></td>
+    // `;
 
     window.RefreshBids = ()=>{};
     window.ResetCounter = ()=>{};
     document.title = 'Watch List: ' + document.title;
     document.body.innerHTML = tableTemplate.mustache({tableID: DATA_TABLE_ID});
     AuctionItemRow.__register();
-    items.forEach(itm=>test(itm).then(insertRow));
+    items.forEach(insertRow);
 
-    function test(url) {
-        return requestItemInfo(url)
-            .then((data)=> {
-                let actionInfo = getAuctionIdFromURL(url);
-                return {actionInfo: actionInfo, data: data, sourceURL: url};
-            });
-    }
+    function insertRow(url) {
+        let tbodyElem = document.body.querySelector('table > tbody'),
+            oData = {data: AuctionItemRow.getAuctionIdFromURL(url), sourceURL: url};
 
-    function insertRow(oData) {
-        let tbodyElem = document.body.querySelector('table > tbody');
-
-        if(!tbodyElem.querySelector(`tr[id="${oData.data.auctionInfo.item.itemId}"]`)) {
+        if(!tbodyElem.querySelector(`tr[id="${oData.fullId}"]`)) {
             createRow();
         }
 
@@ -397,6 +460,16 @@ var classes = (()=> {
             newRow.setAttribute('src', oData.sourceURL);
             newRow.classList.add('DataRow');
             newRow.setAttribute('valign', 'top');
+            newRow.setAttribute('id', oData.fullId);
+            newRow.addEventListener('change', ()=> {
+                console.log('Change event recieved');
+            });
+            newRow.addEventListener('update-start', ()=> {
+                console.log('Update start event recieved');
+            });
+            newRow.addEventListener('update-end', ()=> {
+                console.log('Update end event recieved');
+            });
 
             tbodyElem.appendChild(newRow);
             return newRow;
@@ -421,85 +494,85 @@ var classes = (()=> {
 
 
 
-    function requestItemInfo(url) {
-        return request(url)
-            .then((req)=>{
-                let div = document.createElement('div');
-                div.innerHTML = req.responseText;
-                return div;
-            })
-            .then(getAllInfoFromElem);
-    }
+    // function requestItemInfo(url) {
+    //     return request(url)
+    //         .then((req)=>{
+    //             let div = document.createElement('div');
+    //             div.innerHTML = req.responseText;
+    //             return div;
+    //         })
+    //         .then(getAllInfoFromElem);
+    // }
 
-    function getAllInfoFromElem(elem) {
-        let table = elem.querySelector(`table#${DATA_TABLE_ID}`),
-            trData = table.querySelector('tbody > tr:first-child'),
+    // function getAllInfoFromElem(elem) {
+    //     let table = elem.querySelector(`table#${DATA_TABLE_ID}`),
+    //         trData = table.querySelector('tbody > tr:first-child'),
 
-            client = elem.querySelector('input[name="client"]') || {},
-            auction = elem.querySelector('input[name="auction"]') || {},
-            contents = elem.querySelector('input[name="contents"]') || {},
-            icon     = trData.querySelector('td.photo img') || {},
-            description = trData.querySelector('td.description') || {},
-            bids        = trData.querySelector('td.bids') || {},
-            highbidder = trData.querySelector('td.highbidder') || {},
-            currentAmount = trData.querySelector('td.currentamount') || {},
-            nextBidRequired = trData.querySelector('td.nextbidrequired') || {},
-            yourBid         = trData.querySelector('td.yourbid') || {},
-            yourMaxBid      = trData.querySelector('td.yourmaximum') || {},
+    //         client = elem.querySelector('input[name="client"]') || {},
+    //         auction = elem.querySelector('input[name="auction"]') || {},
+    //         contents = elem.querySelector('input[name="contents"]') || {},
+    //         icon     = trData.querySelector('td.photo img') || {},
+    //         description = trData.querySelector('td.description') || {},
+    //         bids        = trData.querySelector('td.bids') || {},
+    //         highbidder = trData.querySelector('td.highbidder') || {},
+    //         currentAmount = trData.querySelector('td.currentamount') || {},
+    //         nextBidRequired = trData.querySelector('td.nextbidrequired') || {},
+    //         yourBid         = trData.querySelector('td.yourbid') || {},
+    //         yourMaxBid      = trData.querySelector('td.yourmaximum') || {},
 
-            itemId = (contents.value || '').replace('/', ''),  //contents
-            itemIcon = icon.src || '',
-            itemDescription = (description.textContent || '').trim(),
-            itemNumOfBids = (bids.textContent || '').trim(),
-            itemHighBidder = (highbidder.textContent || '').trim(),
-            itemCurrentAmount = (currentAmount.textContent || '').trim(),
-            itemNextBidRequired = (nextBidRequired.textContent || '').trim(),
-            itemYourBid = (yourBid.textContent || '').trim(),
-            itemYourMaxBid = (yourMaxBid.textContent || '').trim(),
-            auctionId = auction.value || '',  //event
-            auctionName = client.value || '', //c
-            auctionNum = Auction.AUCTIONID_ID_REG.exec(auctionId + '/' + itemId);
+    //         itemId = (contents.value || '').replace('/', ''),  //contents
+    //         itemIcon = icon.src || '',
+    //         itemDescription = (description.textContent || '').trim(),
+    //         itemNumOfBids = (bids.textContent || '').trim(),
+    //         itemHighBidder = (highbidder.textContent || '').trim(),
+    //         itemCurrentAmount = (currentAmount.textContent || '').trim(),
+    //         itemNextBidRequired = (nextBidRequired.textContent || '').trim(),
+    //         itemYourBid = (yourBid.textContent || '').trim(),
+    //         itemYourMaxBid = (yourMaxBid.textContent || '').trim(),
+    //         auctionId = auction.value || '',  //event
+    //         auctionName = client.value || '', //c
+    //         auctionNum = Auction.AUCTIONID_ID_REG.exec(auctionId + '/' + itemId);
 
-        return {
-            elem:        elem,
-            auctionInfo: {
-                auction: new Auction(auctionName, auctionNum, auctionId), //c, , event
-                item:    new AuctionItem({
-                    itemId,
-                    itemIcon,
-                    itemDescription,
-                    itemNumOfBids,
-                    itemHighBidder,
-                    itemCurrentAmount,
-                    itemNextBidRequired,
-                    itemYourBid,
-                    itemYourMaxBid
-                })
-            }
-        };
-    }
+    //     return {
+    //         elem:        elem,
+    //         auctionInfo: {
+    //             auction: new Auction(auctionName, auctionNum, auctionId), //c, , event
+    //             item:    new AuctionItem({
+    //                 itemId,
+    //                 itemIcon,
+    //                 itemDescription,
+    //                 itemNumOfBids,
+    //                 itemHighBidder,
+    //                 itemCurrentAmount,
+    //                 itemNextBidRequired,
+    //                 itemYourBid,
+    //                 itemYourMaxBid
+    //             })
+    //         }
+    //     };
+    // }
 
-    function getAuctionIdFromURL(url) {
-        let fullID = Auction.AUCTIONID_ID_REG.exec(url.search),
-            client = '',
-            auctionId = '',
-            itemId = '',
-            auctionNum = '';
+    // function getAuctionIdFromURL(url) {
+    //     let fullID = Auction.AUCTIONID_ID_REG.exec(url.search),
+    //         client = '',
+    //         auctionId = '',
+    //         itemId = '',
+    //         auctionNum = '';
 
-        if(fullID) {
-            client = fullID[Auction.CLIENT] || '';
-            auctionId = fullID[Auction.AUCTION_ID] || '';
-            itemId = fullID[Auction.ITEM_ID] || '';
-            auctionNum = fullID[Auction.AUCTION_NUM] || '';
-        }
+    //     if(fullID) {
+    //         client = fullID[Auction.CLIENT] || '';
+    //         auctionId = fullID[Auction.AUCTION_ID] || '';
+    //         itemId = fullID[Auction.ITEM_ID] || '';
+    //         auctionNum = fullID[Auction.AUCTION_NUM] || '';
+    //     }
 
-        return {
-            c:          client,
-            event:      auctionId,
-            contents:   itemId,
-            auctionNum: auctionNum
-        };
-    }
+    //     return {
+    //         c:          client,
+    //         event:      auctionId,
+    //         contents:   itemId,
+    //         auctionNum: auctionNum
+    //     };
+    // }
     // function buildGetBidsURL(actionInfo) {
     //     let getBidsURL = new URL('/cgi-bin/v6.cgi', PAGE_ORIGIN);
     //     actionInfo['a'] = 'getBids';
@@ -509,26 +582,26 @@ var classes = (()=> {
     //     return getBidsURL;
     // }
 
-    function request(url) {
-        const oReq = new XMLHttpRequest();
+    // function request(url) {
+    //     const oReq = new XMLHttpRequest();
 
-        return new Promise((resolve, reject)=> {
-            oReq.open('GET', url, true);
-            oReq.addEventListener('load', success);
-            oReq.addEventListener('error', fail);
-            oReq.addEventListener('abort', fail);
-            oReq.addEventListener('timeout', fail);
-            oReq.send();
+    //     return new Promise((resolve, reject)=> {
+    //         oReq.open('GET', url, true);
+    //         oReq.addEventListener('load', success);
+    //         oReq.addEventListener('error', fail);
+    //         oReq.addEventListener('abort', fail);
+    //         oReq.addEventListener('timeout', fail);
+    //         oReq.send();
 
-            function fail(evt) {
-                reject(oReq, evt);
-            }
-            function success(evt) {
-                if( oReq.getResponseHeader('content-type').indexOf('application/json') !== -1) {
-                    oReq.responseJSON = JSON.parse(oReq.responseText);
-                }
-                resolve(oReq, evt);
-            }
-        });
-    }
+    //         function fail(evt) {
+    //             reject(oReq, evt);
+    //         }
+    //         function success(evt) {
+    //             if( oReq.getResponseHeader('content-type').indexOf('application/json') !== -1) {
+    //                 oReq.responseJSON = JSON.parse(oReq.responseText);
+    //             }
+    //             resolve(oReq, evt);
+    //         }
+    //     });
+    // }
 })(classes.AuctionItemRow, classes.Auction, classes.AuctionItem);
