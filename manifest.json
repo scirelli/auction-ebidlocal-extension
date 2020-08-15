@@ -1,0 +1,47 @@
+{
+    "name":"Auction Watch List",
+    "version": "0.5",
+    "description": "Watch list for auction sites.",
+    "manifest_version": 2,
+    "minimum_chrome_version": "29",
+
+    "background": { 
+        "scripts": [
+            "background.js"
+        ],
+        "persistent":false
+    },
+
+    "page_action" :{
+        "default_icon" :  "icon-128.png",
+        "default_title" : "Auction Watch List",
+        "default_popup":  "extension/watchlist/popup.html"
+    },
+
+    "icons" : {
+        "24" : "icon-24.png",
+        "32" : "icon-32.png",
+        "48" : "icon-48.png",
+        "128" : "icon-128.png"
+    },
+
+    "content_scripts": [
+        {
+            "matches": [
+                "*://auction.ebidlocal.com/cgi-bin/mmlist.cgi*"
+            ],
+            "js": [
+                "node_modules/@webcomponents/custom-elements/custom-elements.min.js",
+                "contentScripts/watchlist/main.js"
+            ],
+            "css":[
+            ]
+        }
+    ],
+    "permissions" : [
+        "tabs",
+        "*://*.ebidlocal.com/*",
+         "identity"
+    ],
+    "content_security_policy": "script-src 'self'; object-src 'self'"
+}

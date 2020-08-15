@@ -23,5 +23,8 @@
   "devDependencies": {
     "babel-eslint": "^10.1.0",
     "eslint": "^7.6.0"
+  },
+  "dependencies": {
+    "@webcomponents/custom-elements": "^1.4.2"
   }
 }

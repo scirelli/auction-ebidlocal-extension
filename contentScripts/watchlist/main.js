@@ -1,4 +1,4 @@
-//TODO: Make the table a custom component that handles coordinating updates of the rows.
+//TODO: Chrome Extensions does not support Custom Elements. Need to remove it from this code.
 if(!String.prototype.mustache) {
     String.prototype.mustache = function(o) {
         return this.replace(/{{([^{}]*)}}/g, function(a, b) {
@@ -117,6 +117,7 @@ var classes = (()=> {
 
         _createRow(oData) {
             let newRow = document.createElement('tr', {is: AuctionItemRow.TAG_NAME});
+            newRow.__auctionItemRow = new AuctionItemRow(newRow);
             newRow.setAttribute('src', oData.sourceURL);
             newRow.classList.add('DataRow');
             newRow.setAttribute('valign', 'top');
@@ -224,8 +225,8 @@ var classes = (()=> {
         `
     }
 
-    class AuctionItemRow extends HTMLTableRowElement{
-        static TAG_NAME = 'auction-item-row';
+    class AuctionItemRow{
+        static TAG_NAME = 'tr';
         static DEFAULT_REFRESH_RATE_MS = 10 * 1000;
         static DATA_TABLE_ID = 'DataTable';
         static CHANGE_WATCH_PROPS = [
@@ -241,35 +242,54 @@ var classes = (()=> {
         refreshRate = AuctionItemRow.DEFAULT_REFRESH_RATE_MS;
         oldDatat;
 
-        constructor() {
-            super();
+        constructor(elem) {
+            this.elem = elem;
+
             let template = document.getElementById('auction-item-row-template'),
                 templateContent = template.content;
 
-            this.appendChild(templateContent.cloneNode(true));
-            this.addEventListener('refresh', this._onRefresh.bind(this));
+            this._registerForAttributeChanges(elem);
+
+            elem.appendChild(templateContent.cloneNode(true));
+            elem.addEventListener('refresh', this._onRefresh.bind(this));
+        }
+
+        _registerForAttributeChanges() {
+            let observer = new MutationObserver((mutations)=> {
+                mutations.forEach((mutation)=> {
+                    if (mutation.type === 'attributes') {
+                        this.attributeChangedCallback(mutation.attributeName, mutation.oldValue, mutation.target.getAttribute(mutation.attributeName));
+                    }
+                });
+            });
+
+            observer.observe(this.elem, {
+                attributes:        true,
+                attributeOldValue: true,
+                attributeFilter:   this.observedAttributes
+            });
         }
 
         attributeChangedCallback(name, oldValue, newValue) {
             switch(name) {
                 case 'src':
-                    this.dispatchEvent(new CustomEvent('update-start', {}));
+                    this.elem.dispatchEvent(new CustomEvent('update-start', {}));
                     AuctionItemRow.requestItemInfo(new URL(newValue))
                         .then((data)=> {
                             this._setLinksAndImages(data);
                             this._update(data);
-                            if(this.getAttribute('data-auto-refresh') !== null) {
+                            if(this.elem.getAttribute('data-auto-refresh') !== null) {
                                 this._stopRefresh();
                                 this._startRefresh();
                             }
                         })
                         .then(()=> {
-                            this.dispatchEvent(new CustomEvent('update-end', {}));
+                            this.elem.dispatchEvent(new CustomEvent('update-end', {}));
                         })
                         .catch(e=> {
                             console.error(e);
-                            this.dispatchEvent(new CustomEvent('update-end', {}));
-                            this.remove();
+                            this.elem.dispatchEvent(new CustomEvent('update-end', {}));
+                            this.elem.remove();
                         });
                     break;
                 case 'data-refresh-rate':
@@ -301,11 +321,11 @@ var classes = (()=> {
 
         _refresh() {
             let self = this,
-                src = this.getAttribute('src');
+                src = this.elem.getAttribute('src');
 
             if(!src) return Promise.resolve();
 
-            this.dispatchEvent(new CustomEvent('update-start', {}));
+            this.elem.dispatchEvent(new CustomEvent('update-start', {}));
             return AuctionItemRow.requestItemInfo(new URL(src))
                 .catch(e=> {
                     console.error(new Error('Unable to parse data'));
@@ -314,8 +334,8 @@ var classes = (()=> {
                 .then((data)=>{
                     if(this._hasDataChanged(this.oldData.auctionInfo.item, data.auctionInfo.item)) {
                         this._update(data);
-                        this.dispatchEvent(new Event('change'));
-                        this.dispatchEvent(new CustomEvent('data-change', {detail: {data: data}}));
+                        this.elem.dispatchEvent(new Event('change'));
+                        this.elem.dispatchEvent(new CustomEvent('data-change', {detail: {data: data}}));
                     }
                 })
                 .then(done)
@@ -323,16 +343,16 @@ var classes = (()=> {
 
             function done(m) {
                 if(m) console.error(m);
-                self.dispatchEvent(new CustomEvent('update-end', {}));
+                self.elem.dispatchEvent(new CustomEvent('update-end', {}));
             }
         }
 
         _setLinksAndImages(data) {
-            let itemElem = this.querySelector('.item a'),
-                photoAnchorElem = this.querySelector('.photo a'),
-                photoIconElem = this.querySelector('.photo a img.icon-small'),
-                photoIconLargeElem = this.querySelector('.photo a img.icon-large'),
-                bidsAnchorElem = this.querySelector('.bids a'),
+            let itemElem = this.elem.querySelector('.item a'),
+                photoAnchorElem = this.elem.querySelector('.photo a'),
+                photoIconElem = this.elem.querySelector('.photo a img.icon-small'),
+                photoIconLargeElem = this.elem.querySelector('.photo a img.icon-large'),
+                bidsAnchorElem = this.elem.querySelector('.bids a'),
                 auction = data.auctionInfo.auction,
                 item = data.auctionInfo.item,
                 allData = {...item, ...auction};
@@ -350,14 +370,14 @@ var classes = (()=> {
         }
 
         _updateData(newData) {
-            let itemElem = this.querySelector('.item a'),
-                descriptionElem = this.querySelector('.description'),
-                bidsElem = this.querySelector('.bids a span'),
-                highBiddersElem = this.querySelector('.highbidder span'),
-                currentAmountElem = this.querySelector('.currentamount span'),
-                nextBidRequiredElem = this.querySelector('.nextbidrequired span'),
-                yourBidElem = this.querySelector('.yourbid span'),
-                yourMaxBidElem = this.querySelector('.yourmaximum span'),
+            let itemElem = this.elem.querySelector('.item a'),
+                descriptionElem = this.elem.querySelector('.description'),
+                bidsElem = this.elem.querySelector('.bids a span'),
+                highBiddersElem = this.elem.querySelector('.highbidder span'),
+                currentAmountElem = this.elem.querySelector('.currentamount span'),
+                nextBidRequiredElem = this.elem.querySelector('.nextbidrequired span'),
+                yourBidElem = this.elem.querySelector('.yourbid span'),
+                yourMaxBidElem = this.elem.querySelector('.yourmaximum span'),
 
                 auction = newData.auctionInfo.auction,
                 item = newData.auctionInfo.item,
@@ -506,7 +526,6 @@ var classes = (()=> {
         }
 
         static __register() {
-            customElements.define(AuctionItemRow.TAG_NAME, AuctionItemRow, {extends: 'tr'});
             document.body.insertAdjacentHTML('beforeend', AuctionItemRow.template);
             document.body.insertAdjacentHTML('beforeend', AuctionItemRow.styles);
         }
@@ -763,11 +782,7 @@ var utils = (()=> {
     });
 })(classes.AuctionWatchList, classes.AuctionItemRow, classes.Auction, classes.AuctionItem, utils);
 
-// items = [
-//             'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12',
-//             'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/27',
-//             'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/57',
-//             'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples427/7376',
-//             'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples414/1068', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples414/1076', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/665', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/677', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/730', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/652', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/698', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/651', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/403 ', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/407', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/408', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/411', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/423', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/424', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/452', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/461', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/523', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/527', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/531', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/553', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/239', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/137', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/142', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/119', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/120', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/70', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/53', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/33', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1079', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1062', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1028', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1015', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1220', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1270', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1274', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/2500', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/242', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/245', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/32', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/24', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/118', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2027/3', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2074', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2034', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2263', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/37', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/144', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/155', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/158', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/312', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/457', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/472', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/2', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/6', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/13', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples427/7760', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/757', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/757', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/425', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/509', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/529', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/27', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/57', 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1149'
-//         ].map(l=>{return new URL(l);}),
-
+/*
+items = 'https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/27, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/57, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples427/7376, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples414/1068, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples414/1076, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/665, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/677, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/730, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/652, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/698, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/651, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/403 , https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/407, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/408, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/411, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/423, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/424, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/452, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/461, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/523, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/527, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/531, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/553, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/239, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/137, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/142, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/119, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/120, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/70, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/53, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/33, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1079, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1062, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1028, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1015, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1220, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1270, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1274, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/2500, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/242, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/245, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/32, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/24, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples429/118, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2027/3, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2074, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2034, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples428/2263, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/37, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/144, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/155, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/158, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/312, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/457, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples423/472, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/2, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/6, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/13, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples427/7760, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/757, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/757, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/425, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/509, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples421/529, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/12, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/27, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples422/57, https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples412/1149'
+    .split(', ').map(l=>{return new URL(l);});
+*/

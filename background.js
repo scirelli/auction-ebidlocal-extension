@@ -1,13 +1,14 @@
+/*global chrome*/
+const ACTION_HOST = 'auction.ebidlocal.com';
+
 // Called when the url of a tab changes.
 // Listen for any changes to the URL of any tab.
-const EBIDLOCAL_DOMAIN = 'auction.ebidlocal.com'
-
 chrome.tabs.onUpdated.addListener(function checkForValidUrl(tabId, changeInfo, tab) {
-    if(tab.url.indexOf(`${actionHost}/cgi-bin/mmlist.cgi`) > -1 ||
-       tab.url.indexOf(`${actionHost}/cgi-bin/mmlist`) > -1) {
+    if(tab.url.indexOf(`${ACTION_HOST}/cgi-bin/mmlist.cgi`) > -1 ||
+       tab.url.indexOf(`${ACTION_HOST}/cgi-bin/mmlist`) > -1) {
         chrome.pageAction.setPopup({
             tabId: tabId,
-            popup: 'itemDetails/popup.html'
+            popup: 'extension/watchlist/popup.html'
         });
         chrome.pageAction.show(tabId);
     }
