@@ -14,12 +14,25 @@ chrome.tabs.onUpdated.addListener(function checkForValidUrl(tabId, changeInfo, t
     }
 });
 
+chrome.webNavigation.onCompleted.addListener(function(details) {
+    chrome.pageAction.setPopup({
+        tabId: details.tabId,
+        popup: 'extension/watchlist/popup.html'
+    });
+    chrome.pageAction.show(details.tabId);
+}, {url: [{hostContains: ACTION_HOST, pathPrefix: '/cgi-bin/mmlist.cgi'}]});
+
 chrome.runtime.onMessage.addListener(function(oResponse, sender, sendResponse) {
     console.log(oResponse);
-
+    // chrome.tabs.executeScript({file: 'logic.js'});
     return true;
 });
-
+chrome.runtime.onSuspend.addListener(function() {
+    //Do some last minute saving.
+    //chrome.storage.local.set({variable: variableInformation});
+    console.log("Unloading.");
+    chrome.browserAction.setBadgeText({text: ""});
+});
 /*
 chrome.cookies.onChanged.addListener(function(info) {
   console.log("onChanged" + JSON.stringify(info));

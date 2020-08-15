@@ -31,7 +31,9 @@
        "expect": false,
        "expectAsync": false,
        "inject": false,
-       "__dirname": false
+       "__dirname": false,
+       "require": false,
+       "module": false
    },
 
    "rules": {
