@@ -37,7 +37,7 @@
                 "*://auction.ebidlocal.com/cgi-bin/mmlist.cgi*"
             ],
             "js": [
-                "node_modules/@webcomponents/custom-elements/custom-elements.min.js",
+                "contentScripts/watchlist/js/custom-elements.min.js",
                 "contentScripts/watchlist/js/extras/Array.js",
                 "contentScripts/watchlist/js/extras/Function.js",
                 "contentScripts/watchlist/js/extras/String.js",

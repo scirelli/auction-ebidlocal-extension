@@ -2,13 +2,15 @@
 <html>
     <head>
         <title>Auction Enhancments Options</title>
-        <link rel="stylesheet" type="text/css" href="optionsPage/css/styles.css">
+        <link rel="stylesheet" type="text/css" href="css/styles.css">
     </head>
 
     <body>
         <form action="#">
-            <input type="text" id="bidder-id" name="bidderId"/>
+            <label for="bidderId">Bidder Number:</label>
+            <input type="text" id="bidderId" name="bidderId" size="8"/>
+            <button id="saveBtn" name="saveBtn" value="save">Save</button>
         </form>
-        <script type="module" src="optionsPage/js/main.js"></script>
+        <script type="module" src="js/main.js"></script>
     </body>
 </html>

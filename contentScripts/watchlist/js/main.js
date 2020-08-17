@@ -2,6 +2,7 @@
 * TODO: Chrome Extensions does not support Custom Elements. Need to remove it from this code.
 * Need to use shadow dom with this custom elements library.
 * Only way to get custom elements partially working was to use a library. ...Annoying need to remove it and find another way.
+* Need to add bidder number to options screen.
 */
 import * as extras from './extras/index.js'; //eslint-disable-line no-unused-vars
 import * as utils from './utils/auction-categories_All-Page.js';
@@ -22,7 +23,8 @@ const styles = `
 
 let refreshRate = 10,
     isReplaced = false,
-    allAuctionItems = [];
+    allAuctionItems = [],
+    bidderId = null;
 
 //chrome.runtime.sendMessage(extensionId, message, options, responseCallback)//responseCallback(responseObj)
 chrome.runtime.onMessage.addListener((message, sender, sendResponseCallback)=> {
@@ -67,6 +69,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponseCallback)=> {
                 .catch(e=> {
                     sendResponseCallback({message: 'Failed All Add.', error: e});
                 });
+            break;
+
+        case 'save-bidder':
+            bidderId = message.bidderId;
             break;
 
         default:
@@ -122,9 +128,10 @@ function replacePage() {
     });
 
     watchListElem.addEventListener('watchlist-data-change', (e)=> {
-        let highBidderElem = e.detail.row.querySelector('td.highbidder');
+        let highBidderElem = e.detail.row.querySelector('td.highbidder'),
+            bId = bidderId || e.detail.data.auctionInfo.bidder.id.trim();
 
-        if(e.detail.data.auctionInfo.bidder.id.trim() !== e.detail.data.auctionInfo.item.itemHighBidder.trim()) {
+        if( bId !== e.detail.data.auctionInfo.item.itemHighBidder.trim()) {
             highBidderElem.classList.add('not-high-bidder');
         }else {
             highBidderElem.classList.remove('not-high-bidder');
