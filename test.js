@@ -682,6 +682,9 @@ var utils = (()=> {
                 #addItemform > div > input {
                     display: block;
                 }
+                textarea {
+                    width: 350px;
+                }
                 section.add-item-section {
                     padding: 4px;
                 }

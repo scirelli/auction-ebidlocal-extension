@@ -36,4 +36,4 @@ class AuctionItem{
     }
 }
 
-if(module && module.exports) module.exports = AuctionItem;
+export {AuctionItem};

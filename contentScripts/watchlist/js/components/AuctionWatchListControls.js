@@ -1,47 +1,62 @@
-
 class AuctionWatchListControls extends HTMLElement{
+    static TAG_NAME = 'auction-watch-list-controls';
+
     constructor() {
         super();
-        let frag = document.createDocumentFragment(),
-            div = frag.appendChild(document.createElement('div')),
-            template = document.getElementById('auction-watch-list-controls-template'),
-            templateContent = template.content;
+        let div = document.createElement('div'),
+            template;
 
-        this.appendChild(templateContent.cloneNode(true));
-        this.addEventListener('add-item', this._onAddItem.bind(this));
+        div.innerHTML = AuctionWatchListControls.template;
+        template = div.querySelector('template');
+
+        this.appendChild(template.content.cloneNode(true));
+        this.addEventListener('add-item', (evnt)=>{
+            this.__addItem([].concat(evnt.detail.items || []));
+        });
     }
+
+    __addItem(items) {
+        this.querySelector('textarea').value += '\n' + items.filter(Boolean).join('\n');
+    }
+
+    static __register(doc) {
+        customElements.define(AuctionWatchListControls.TAG_NAME, AuctionWatchListControls);
+        doc.insertAdjacentHTML('beforeend', AuctionWatchListControls.styles);
+    }
+
     static styles = `
         <style>
-            body {
-                padding: 4px;
-            }
-            table {
-                width: 100%;
-            }
-            form#addItemform label, form#addItemform input {
+            form.addItemform label, form.addItemform input {
                 vertical-align: top;
             }
             .not-high-bidder {
                 color: red
             }
 
-            #addItemform > div {
+            form.addItemform > div {
                 display: inline-block;
                 vertical-align: top;
             }
-            #addItemform > div > input {
+            form.addItemform > div > input {
                 display: block;
             }
-            section.add-item-section {
+            .auction-watch-list-controls-container {
                 padding: 4px;
             }
+            textarea {
+                width: 350px;
+            }
+            section.add-item-section {
+                margin-bottom: 4px;
+            }
         </style>
-    `;
+    `
+
     static template = `
         <template id="auction-watch-list-controls-template">
-            <div>
+            <div class="auction-watch-list-controls-container">
                 <section class="add-item-section">
-                    <form id="addItemform" action="#">
+                    <form class="addItemform" action="#">
                         <fieldset>
                             <label for="addItem">Add Item</label>
                             <textarea name="addItem"></textarea>
@@ -52,8 +67,8 @@ class AuctionWatchListControls extends HTMLElement{
                         </fieldset>
                     </form>
                 </section>
-                <section class="add-item-section">
-                    <form id="refreshRateForm" action="#">
+                <section class="refresh-rate-section">
+                    <form class="refreshRateForm" action="#">
                         <fieldset>
                             <label for="refreshRate">Refresh rate:</label>
                             <input type="number" min="1" max="10" name="refreshRate" value="10"/>
@@ -64,7 +79,6 @@ class AuctionWatchListControls extends HTMLElement{
             </div>
         </template>
     `;
-
 }
 
-module.exports = AuctionWatchListControls;
+export {AuctionWatchListControls};

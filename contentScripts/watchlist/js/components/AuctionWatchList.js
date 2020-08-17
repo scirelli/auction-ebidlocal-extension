@@ -1,4 +1,4 @@
-const AuctionItemRow = require('./AuctionItemRow.js');
+import {AuctionItemRow} from './AuctionItemRow.js';
 
 class AuctionWatchList extends HTMLElement{
     static TAG_NAME = 'auction-watch-list';
@@ -113,10 +113,10 @@ class AuctionWatchList extends HTMLElement{
         this._addItem(evt.detail.src);
     }
 
-    static __register() {
+    static __register(doc) {
         customElements.define(AuctionWatchList.TAG_NAME, AuctionWatchList);
-        document.body.insertAdjacentHTML('beforeend', AuctionWatchList.template);
-        document.body.insertAdjacentHTML('beforeend', AuctionWatchList.style);
+        doc.insertAdjacentHTML('beforeend', AuctionWatchList.template);
+        doc.insertAdjacentHTML('beforeend', AuctionWatchList.style);
     }
 
     static template = `
@@ -178,4 +178,4 @@ class AuctionWatchList extends HTMLElement{
     `
 }
 
-if(module && module.exports) module.exports = AuctionWatchList;
+export {AuctionWatchList};

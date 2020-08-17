@@ -33,7 +33,8 @@
        "inject": false,
        "__dirname": false,
        "require": false,
-       "module": false
+       "module": false,
+       "chrome": false
    },
 
    "rules": {
@@ -68,7 +69,7 @@
        "comma-dangle":"error",
        "comma-spacing":["error", {"before": false, "after": true }],
        "space-before-function-paren": ["error",{"anonymous": "ignore", "named": "never"}],
-       "no-console": ["warn", { "allow": ["warn", "error", "log"] }],
+       "no-console": ["warn", { "allow": ["info", "debug", "warn", "error", "log"] }],
        "semi": ["error", "always"]
    }
 }

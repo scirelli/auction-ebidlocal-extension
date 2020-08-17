@@ -54,4 +54,4 @@ class Auction{
     }
 }
 
-if(module && module.exports) module.exports = Auction;
+export {Auction};

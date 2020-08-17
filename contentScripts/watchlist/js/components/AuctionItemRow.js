@@ -1,5 +1,5 @@
-const Auction = require('./Auction.js'),
-    AuctionItem = require('./AuctionItem');
+import {Auction} from './Auction.js';
+import {AuctionItem} from './AuctionItem.js';
 
 class AuctionItemRow{
     static TAG_NAME = 'tr';
@@ -301,9 +301,9 @@ class AuctionItemRow{
         });
     }
 
-    static __register() {
-        document.body.insertAdjacentHTML('beforeend', AuctionItemRow.template);
-        document.body.insertAdjacentHTML('beforeend', AuctionItemRow.styles);
+    static __register(doc) {
+        doc.insertAdjacentHTML('beforeend', AuctionItemRow.template);
+        doc.insertAdjacentHTML('beforeend', AuctionItemRow.styles);
     }
 
     static template = `
@@ -331,4 +331,4 @@ class AuctionItemRow{
     `;
 }
 
-if(module && module.exports) module.exports = AuctionItemRow;
+export { AuctionItemRow };
