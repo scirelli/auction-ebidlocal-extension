@@ -1,5 +1,5 @@
 document.querySelector('button#saveBtn').addEventListener('click', ()=> {
-    notifyBidderId(document.querySelector('input#bidderId').value);
+    notifyBidderId(document.querySelector('input#bidderId').value || '');
 });
 
 document.querySelector('button#saveBtn').addEventListener('click', ()=> {
@@ -8,7 +8,7 @@ document.querySelector('button#saveBtn').addEventListener('click', ()=> {
 
 document.addEventListener('DOMContentLoaded', ()=>{
     chrome.storage.sync.get(['bidderId'], function(result) {
-        document.querySelector('input#bidderId').value = result.bidderId;
+        document.querySelector('input#bidderId').value = result.bidderId || '';
     });
 });
 
