@@ -56,14 +56,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
                 sendMessageToAll({message: 'add-all', url: currentTab.url});
             }else {
                 let label = document.body.querySelector('form#watch-list-form label[for="addCurrentPageURL"]');
-                label.classList.add('error');
-                label.textContent = 'Not able to add this page.';
-                label.classList.remove('hidden');
-                setTimeout(()=> {
-                    label.classList.remove('error');
-                    label.textContent = '';
-                    label.classList.add('hidden');
-                }, 3000);
+                if(label) {
+                    label.classList.add('error');
+                    label.textContent = 'Not able to add this page.';
+                    label.classList.remove('hidden');
+                    setTimeout(()=> {
+                        label.classList.remove('error');
+                        label.textContent = '';
+                        label.classList.add('hidden');
+                    }, 3000);
+                }
             }
         });
 

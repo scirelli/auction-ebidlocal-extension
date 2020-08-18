@@ -9,7 +9,8 @@ class AuctionItemRow{
         'itemNumOfBids',
         'itemHighBidder',
         'itemCurrentAmount',
-        'itemNextBidRequired'
+        'itemNextBidRequired',
+        'itemYourMaxBid'
     ];
 
     static get observedAttributes() { return ['src', 'data-refresh-rate', 'data-auto-refresh']; }
@@ -104,10 +105,12 @@ class AuctionItemRow{
                 throw e;
             })
             .then((data)=>{
-                if(!this.oldData || this._hasDataChanged(this.oldData.auctionInfo.item, data.auctionInfo.item)) {
+                let oldData = this.oldData;
+
+                if(!this.oldData || this._hasDataChanged(this.oldData, data)) {
                     this._update(data);
                     this.elem.dispatchEvent(new Event('change'));
-                    this.elem.dispatchEvent.defer(this.elem, new CustomEvent('data-change', {detail: {data: data}}));
+                    this.elem.dispatchEvent.defer(this.elem, new CustomEvent('data-change', {detail: {data: data, oldData: oldData}}));
                 }
                 self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail:{data: data}}));
                 return data;
@@ -173,13 +176,27 @@ class AuctionItemRow{
     _hasDataChanged(oldData, newData) {
         if(!oldData || !newData) return true;
 
+        oldData = oldData.auctionInfo.item;
+        newData = newData.auctionInfo.item;
+
         return AuctionItemRow.CHANGE_WATCH_PROPS.reduce((acc, prop)=> {
             return acc || oldData[prop] !== newData[prop];
         }, false);
     }
-
+    
     _onRefresh() {
         this._refresh();
+    }
+
+    static whatDataChanged(oldData, newData) {
+        oldData = oldData.auctionInfo.item;
+        newData = newData.auctionInfo.item;
+        return AuctionItemRow.CHANGE_WATCH_PROPS.reduce((acc, prop)=> {
+            if(!oldData || oldData[prop] !== newData[prop]) {
+                acc[prop] = newData[prop];
+            }
+            return acc;
+        }, {});
     }
 
     static requestItemInfo(url) {
@@ -219,7 +236,7 @@ class AuctionItemRow{
             itemCurrentAmount = (currentAmount.textContent || '').trim(),
             itemNextBidRequired = (nextBidRequired.textContent || '').trim(),
             itemYourBid = (yourBid.textContent || '').trim(),
-            itemYourMaxBid = (yourMaxBid.textContent || '').trim(),
+            itemYourMaxBid = (yourMaxBid.textContent || '').replace('submit bid', '').replace('refresh', '').trim(),
             auctionId = auction.value || '',  //event
             auctionName = client.value || '', //c
             auctionNum = Auction.AUCTIONID_ID_REG.exec(auctionId + '/' + itemId),

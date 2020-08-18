@@ -6,7 +6,7 @@ class AuctionWatchList extends HTMLElement{
 
     static get observedAttributes() { return ['data-refresh-rate']; }
 
-    refreshIntervalId = 0;
+    refreshIntervalId = null;
     refreshRate = AuctionItemRow.DEFAULT_REFRESH_RATE_MS;
 
     constructor() {
@@ -22,8 +22,9 @@ class AuctionWatchList extends HTMLElement{
         switch(name) {
             case 'data-refresh-rate':
                 this.refreshRate =  (parseInt(newValue) || 0) * 1000 || AuctionWatchList.DEFAULT_REFRESH_RATE_MS;
-                this._stopRefresh();
-                this._startRefresh();
+                if(this.refreshIntervalId === null) {
+                    this._startRefresh();
+                }
                 break;
         }
     }
@@ -34,6 +35,7 @@ class AuctionWatchList extends HTMLElement{
         }, this.refreshRate);
     }
     _stopRefresh() {
+        //Does nothing. Would need to break the promise chain.
         clearTimeout(this.refreshIntervalId);
         this.refreshIntervalId = 0;
     }
@@ -77,7 +79,12 @@ class AuctionWatchList extends HTMLElement{
         newRow.setAttribute('valign', 'top');
         newRow.setAttribute('id', oData.data.fullId);
 
-        newRow.addEventListener('change', ()=> {
+        newRow.addEventListener('data-change', (e)=> {
+            let changes = AuctionItemRow.whatDataChanged(e.detail.oldData, e.detail.data);
+
+            if(!e.detail.oldData) return;
+            if(Object.keys(changes).length === 1 && changes['itemYourMaxBid']) return;
+
             newRow.classList.add('changed');
             newRow.addEventListener('mouseenter', function onHover() {
                 newRow.classList.remove('changed');
@@ -102,7 +109,8 @@ class AuctionWatchList extends HTMLElement{
             this.dispatchEvent(new CustomEvent('watchlist-data-change', {detail:
                 {
                     row:  newRow,
-                    data: e.detail.data
+                    data: e.detail.data,
+                    oldData: e.detail.oldData
                 }
             }));
         });
