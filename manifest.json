@@ -1,7 +1,7 @@
 {
     "name":"Auction Watch List",
-    "version": "0.5",
-    "description": "Watch list for auction sites.",
+    "version": "0.5.1",
+    "description": "Watch list for eBidAuctionlocal site.",
     "manifest_version": 2,
     "minimum_chrome_version": "29",
 
@@ -72,7 +72,6 @@
         "activeTab",
         "webNavigation",
         "*://*.ebidlocal.com/*",
-         "identity",
          "storage"
     ],
     "content_security_policy": "script-src 'self'; object-src 'self'"
