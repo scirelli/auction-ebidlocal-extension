@@ -16,7 +16,7 @@ class AuctionItemRow{
 
     refreshIntervalId = 0;
     refreshRate = AuctionItemRow.DEFAULT_REFRESH_RATE_MS;
-    oldDatat;
+    oldData;
 
     constructor(elem) {
         this.elem = elem;
@@ -49,22 +49,16 @@ class AuctionItemRow{
     attributeChangedCallback(name, oldValue, newValue) {
         switch(name) {
             case 'src':
-                this.elem.dispatchEvent(new CustomEvent('update-start', {}));
-                AuctionItemRow.requestItemInfo(new URL(newValue))
+                this._refresh()
                     .then((data)=> {
                         this._setLinksAndImages(data);
-                        this._update(data);
                         if(this.elem.getAttribute('data-auto-refresh') !== null) {
                             this._stopRefresh();
                             this._startRefresh();
                         }
                     })
-                    .then(()=> {
-                        this.elem.dispatchEvent(new CustomEvent('update-end', {}));
-                    })
                     .catch(e=> {
-                        console.error(e);
-                        this.elem.dispatchEvent(new CustomEvent('update-end', {}));
+                        this.elem.dispatchEvent(new CustomEvent('update-failed', {detail:{error: e, elem: this.elem}}));
                         this.elem.remove();
                     });
                 break;
@@ -87,7 +81,9 @@ class AuctionItemRow{
 
     _startRefresh() {
         this.refreshIntervalId = setTimeout(()=> {
-            this._refresh().then(this._startRefresh.bind(this));
+            this._refresh()
+                .then(this._startRefresh.bind(this))
+                .catch(()=>{});
         }, this.refreshRate);
     }
     _stopRefresh() {
@@ -101,26 +97,26 @@ class AuctionItemRow{
 
         if(!src) return Promise.resolve();
 
-        this.elem.dispatchEvent(new CustomEvent('update-start', {}));
+        this.elem.dispatchEvent.defer(this.elem, new CustomEvent('update-start', {}));
         return AuctionItemRow.requestItemInfo(new URL(src))
             .catch(e=> {
                 console.error(new Error('Unable to parse data'));
                 throw e;
             })
             .then((data)=>{
-                if(this._hasDataChanged(this.oldData.auctionInfo.item, data.auctionInfo.item)) {
+                if(!this.oldData || this._hasDataChanged(this.oldData.auctionInfo.item, data.auctionInfo.item)) {
                     this._update(data);
                     this.elem.dispatchEvent(new Event('change'));
-                    this.elem.dispatchEvent(new CustomEvent('data-change', {detail: {data: data}}));
+                    this.elem.dispatchEvent.defer(this.elem, new CustomEvent('data-change', {detail: {data: data}}));
                 }
+                self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail:{data: data}}));
+                return data;
             })
-            .then(done)
-            .catch(done);
-
-        function done(m) {
-            if(m) console.error(m);
-            self.elem.dispatchEvent(new CustomEvent('update-end', {}));
-        }
+            .catch((e)=> {
+                console.error(e);
+                self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail:{data: data}}));
+                throw e;
+            });
     }
 
     _setLinksAndImages(data) {

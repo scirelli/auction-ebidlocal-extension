@@ -1,14 +1,21 @@
 if(!Function.prototype.delay) {
-    Function.prototype.delay = function delay(time) {
-        let args = Array.prototype.slice.call(arguments, 1);
+    Function.prototype.delay = function delay(thsPtr, time) {
+        let args = Array.prototype.slice.call(arguments, 2);
 
         time = parseInt(time) || 0;
 
         return new Promise((resolve)=> {
             setTimeout((...args)=> {
-                resolve(this.apply(this, args));
+                resolve(this.apply(thsPtr, args));
             }, time, ...args);
         });
+    };
+}
+
+if(!Function.prototype.defer) {
+    Function.prototype.defer = function defer(thsPtr) {
+        Array.prototype.splice.call(arguments, 1, 0, 0)
+        return this.delay.apply(this, arguments);
     };
 }
 

@@ -24,7 +24,15 @@ const styles = `
 let refreshRate = 10,
     isReplaced = false,
     allAuctionItems = [],
-    bidderId = null;
+    bidderId = {
+        _bidderId: null,
+        get bidderId() {
+            return this._bidderId;
+        },
+        set bidderId(id) {
+            this._bidderId = id + '';
+        }
+    };
 
 //chrome.runtime.sendMessage(extensionId, message, options, responseCallback)//responseCallback(responseObj)
 chrome.runtime.onMessage.addListener((message, sender, sendResponseCallback)=> {
@@ -72,13 +80,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponseCallback)=> {
             break;
 
         case 'save-bidder':
-            bidderId = message.bidderId;
+            bidderId.bidderId = message.bidderId;
             break;
 
         default:
             sendResponseCallback({message: 'Unable to handle message.'});
     }
     return true;
+});
+
+chrome.storage.sync.get(['bidderId'], function(result) {
+    bidderId.bidderId = result.bidderId || '';
 });
 
 function replacePage() {
@@ -129,7 +141,7 @@ function replacePage() {
 
     watchListElem.addEventListener('watchlist-data-change', (e)=> {
         let highBidderElem = e.detail.row.querySelector('td.highbidder'),
-            bId = bidderId || e.detail.data.auctionInfo.bidder.id.trim();
+            bId = bidderId.bidderId || e.detail.data.auctionInfo.bidder.id.trim();
 
         if( bId !== e.detail.data.auctionInfo.item.itemHighBidder.trim()) {
             highBidderElem.classList.add('not-high-bidder');
@@ -148,7 +160,7 @@ function addAllToWatchList(items) {
     items.chain((url)=> {
         return ((url)=>{
             document.body.querySelector('auction-watch-list').dispatchEvent(new CustomEvent('add-item', {detail: {src: url}}));
-        }).delay(500, url);
+        }).delay(null, 500, url);
     });
 }
 

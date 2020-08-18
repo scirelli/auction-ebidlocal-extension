@@ -45,7 +45,7 @@ class AuctionWatchList extends HTMLElement{
         this.dispatchEvent(new CustomEvent('update-start'));
         return rows.chain(tr=>((tr)=>{
             if(tr) tr.dispatchEvent(new CustomEvent('refresh'));
-        }).delay(500, tr)).then(done).catch(done);
+        }).delay(null, 500, tr)).then(done).catch(done);
 
         function done(m) {
             if(m) console.error(m);
@@ -61,7 +61,8 @@ class AuctionWatchList extends HTMLElement{
                 id = oData.data.fullId;
 
             if(!this.querySelector(`table > tbody > tr[id="${id}"]`)) {
-                this.querySelector('table > tbody').appendChild(this._createRow(oData));
+                let row = this._createRow(oData);
+                this.querySelector('table > tbody').appendChild(row);
             }
         }catch(e) {
             console.error(e);
