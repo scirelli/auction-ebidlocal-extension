@@ -1,9 +1,14 @@
 document.querySelector('button#saveBtn').addEventListener('click', ()=> {
-    notifyBidderId(document.querySelector('input#bidderId').value || '');
-});
+    let bidderId = document.querySelector('input#bidderId').value || '';
 
-document.querySelector('button#saveBtn').addEventListener('click', ()=> {
-    chrome.storage.sync.set({bidderId: document.querySelector('input#bidderId').value}, ()=> {});
+    chrome.storage.sync.set({bidderId: bidderId}, (e)=> {
+        console.log('Set new bidder id.');
+        notifyBidderId(bidderId);
+        document.querySelector('label.success').classList.remove('hidden');
+        setTimeout(()=> {
+            document.querySelector('label.success').classList.add('hidden');
+        }, 2000);
+    });
 });
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -13,14 +18,15 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 
 function notifyBidderId(id) {
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        let tab = tabs[0];
-        chrome.tabs.sendMessage(tab.id, {message: 'save-bidder', bidderId: id}, function handler(response) {
-            if(chrome.runtime.lastError) {
-                console.error(JSON.stringify(chrome.runtime.lastError));
-            }else{
-                console.debug(JSON.stringify(response));
-            }
+    chrome.tabs.query({url: '*://auction.ebidlocal.com/cgi-bin/mmlist.cgi*'}, function(tabs) {
+        tabs.forEach(tab=> {
+            chrome.tabs.sendMessage(tab.id, {message: 'save-bidder', bidderId: id}, function handler(response) {
+                if(chrome.runtime.lastError) {
+                    console.error(JSON.stringify(chrome.runtime.lastError));
+                }else{
+                    console.debug(JSON.stringify(response));
+                }
+            });
         });
     });
 }
