@@ -1,3 +1,67 @@
+/*
+Bid url
+<input type="text" name="m71" size="8" placeholder="your max">
+<input type="hidden" name="auction" value="staples430">
+<input type="hidden" name="contents" value="71/">
+<input type="text" name="bidder" size="8">
+<input type="password" name="password" size="8">
+
+
+-------------------------------------------------------------------------------------------------
+Request Method: POST
+action="/cgi-bin/mmlistb.cgi"
+
+Form data
+autoconfirm=&71=&m71=5&auction=staples430&contents=71%2F&bidder=18848&password=<password>&confirm=Submit+Bids
+
+Second time form data
+auction=staples430&bidder=18848&password=<password>&contents=71%2F&firsttry=firsttry&confirm=confirm&pages=&searchtitle=&searchcount=&page=&m71=5
+
+Headers
+Content-Type: application/x-www-form-urlencoded
+Referer: https://auction.ebidlocal.com/cgi-bin/mmlist.cgi?staples430/71
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+
+-------------------------------------------------------------------------------------------------
+Request URL: https://auction.ebidlocal.com/cgi-bin/mmlistfauth.cgi
+Request Method: POST
+
+Form Data
+auction=staples430&bidder=18848&password=<password>&contents=71%2F&confirm=confirm&pages=&searchtitle=&searchcount=&page=&m71=5&getcheck=on&forward=Continue
+
+Headers
+Content-Type: application/x-www-form-urlencoded
+Referer: https://auction.ebidlocal.com/cgi-bin/mmlistb.cgi
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+
+-------------------------------------------------------------------------------------------------
+
+Headers
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+Content-Type: application/x-www-form-urlencoded
+
+Form Data
+71=&m71=5.00&auction=staples430&contents=71%2F&bidder=18848&password=<password>&item=71&search=71&bid=Submit+Bids
+71: 
+m71: 5.00
+auction: staples430
+contents: 71/
+bidder: 18848
+password: <password>
+item: 71
+search: 71
+bid: Submit Bids
+
+*/
 import {Auction} from './Auction.js';
 import {AuctionItem} from './AuctionItem.js';
 
@@ -117,7 +181,7 @@ class AuctionItemRow{
             })
             .catch((e)=> {
                 console.error(e);
-                self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail:{data: data}}));
+                self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail:{data: {}, error: e}}));
                 throw e;
             });
     }
@@ -189,7 +253,7 @@ class AuctionItemRow{
     }
 
     static whatDataChanged(oldData, newData) {
-        oldData = oldData.auctionInfo.item;
+        oldData = oldData ? oldData.auctionInfo.item : {};
         newData = newData.auctionInfo.item;
         return AuctionItemRow.CHANGE_WATCH_PROPS.reduce((acc, prop)=> {
             if(!oldData || oldData[prop] !== newData[prop]) {
@@ -236,7 +300,7 @@ class AuctionItemRow{
             itemCurrentAmount = (currentAmount.textContent || '').trim(),
             itemNextBidRequired = (nextBidRequired.textContent || '').trim(),
             itemYourBid = (yourBid.textContent || '').trim(),
-            itemYourMaxBid = (yourMaxBid.textContent || '').replace('submit bid', '').replace('refresh', '').trim(),
+            itemYourMaxBid = (yourMaxBid.textContent || '').replace('submit bid', '').replace('refresh', '').replace('watch', '').trim(),
             auctionId = auction.value || '',  //event
             auctionName = client.value || '', //c
             auctionNum = Auction.AUCTIONID_ID_REG.exec(auctionId + '/' + itemId),
@@ -321,6 +385,7 @@ class AuctionItemRow{
 
     static template = `
         <template id="auction-item-row-template">
+           <td class="remove"><button class="pointer"><span class="far"></span></button></td>
            <td class="item"><a target="_blank" href="#">###</a></td>
            <td class="photo" align="center">
                <a target="_blank" href="#">
@@ -340,6 +405,24 @@ class AuctionItemRow{
 
     static styles = `
         <style>
+            .pointer {cursor: pointer;}
+            .remove {
+                text-align: center;
+                margin: 0;
+                padding: 0;
+                vertical-align: middle; 
+            }
+            .far:before{
+                content: "\\f014";
+            }
+            .far {
+                display: inline-block;
+                font: normal normal normal 14px/1 FontAwesome;
+                font-size: 14px;
+                text-rendering: auto;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
         </style>
     `;
 }

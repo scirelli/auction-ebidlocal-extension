@@ -92,11 +92,16 @@ class AuctionWatchList extends HTMLElement{
             });
         });
         newRow.addEventListener('update-start', ()=> {
-            newRow.classList.add('updating');
+            newRow.classList.add('updating-animated');
+        });
+        newRow.addEventListener('animationend', (e)=> {
+            e.preventDefault();
+            newRow.classList.remove('updating-animated');
         });
         newRow.addEventListener('update-end', ()=> {
-            newRow.classList.remove('updating');
+            //newRow.classList.remove('updating-animated');
         });
+
         newRow.addEventListener('change', (e)=> {
             this.dispatchEvent(new CustomEvent('watchlist-change', {detail:
                 {
@@ -114,7 +119,10 @@ class AuctionWatchList extends HTMLElement{
                 }
             }));
         });
-
+        newRow.querySelector('td.remove button').addEventListener('click', (e)=> {
+            e.preventDefault();
+            newRow.remove();
+        });
         return newRow;
     }
 
@@ -133,6 +141,7 @@ class AuctionWatchList extends HTMLElement{
             <table class="listbody" cellpadding="3" cellspacing="1">
                 <thead>
                     <tr bgcolor="#073c68" valign="bottom">
+                        <th width="40"><font color="#ffffff"></th>
                         <th align="center" width="40"><font color="#ffffff"><strong>Item</strong></font></th>
                         <th id="DataTablePhoto" align="center"><font color="#ffffff"><strong>Photo</strong></font></th>
                         <th id="DataTableDesc" align="center"><font color="#ffffff"><strong>Description</strong></font></th>
@@ -181,7 +190,37 @@ class AuctionWatchList extends HTMLElement{
                 transition: background-color 0.2s ease-out;
             }
             tbody tr{
-                transition: background-color 0.2s ease-out;
+                /*transition: background-color 0.2s ease-out;*/
+            }
+
+            tr:nth-of-type(odd).updating-animated {
+                background: linear-gradient(0deg, #EEE, #DDFFDD, #EEE, #EEE);
+                background-size: 400% 300%;
+
+                -webkit-animation: UpdateAnimation 1s ease 1;
+                -moz-animation: UpdateAnimation 1s ease 1;
+                animation: UpdateAnimation 1s ease 1;
+            }
+            tr.updating-animated {
+                background: linear-gradient(0deg, transparent, #DDFFDD, transparent, transparent);
+                background-size: 400% 300%;
+
+                -webkit-animation: UpdateAnimation 1s ease 1;
+                -moz-animation: UpdateAnimation 1s ease 1;
+                animation: UpdateAnimation 1s ease 1;
+            }
+
+            @-webkit-keyframes UpdateAnimation {
+                0%{background-position:50% 0%}
+                100%{background-position:50% -150%}
+            }
+            @-moz-keyframes UpdateAnimation {
+                0%{background-position:50% 0%}
+                100%{background-position:50% -150%}
+            }
+            @keyframes UpdateAnimation {
+                0%{background-position:50% 0%}
+                100%{background-position:50% -150%}
             }
         </style>
     `

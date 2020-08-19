@@ -1,6 +1,6 @@
 {
     "name":"Auction Watch List",
-    "version": "0.5.1",
+    "version": "0.6.1",
     "description": "Watch list for eBidAuctionlocal site.",
     "manifest_version": 2,
     "minimum_chrome_version": "29",
