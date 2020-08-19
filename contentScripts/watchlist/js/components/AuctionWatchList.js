@@ -76,7 +76,6 @@ class AuctionWatchList extends HTMLElement{
         newRow.__auctionItemRow = new AuctionItemRow(newRow);
         newRow.setAttribute('src', oData.sourceURL);
         newRow.classList.add('DataRow');
-        newRow.setAttribute('valign', 'top');
         newRow.setAttribute('id', oData.data.fullId);
 
         newRow.addEventListener('data-change', (e)=> {
@@ -140,7 +139,7 @@ class AuctionWatchList extends HTMLElement{
         <template id="auction-watch-list-template">
             <table class="listbody" cellpadding="3" cellspacing="1">
                 <thead>
-                    <tr bgcolor="#073c68" valign="bottom">
+                    <tr bgcolor="#073c68">
                         <th width="40"><font color="#ffffff"></th>
                         <th align="center" width="40"><font color="#ffffff"><strong>Item</strong></font></th>
                         <th id="DataTablePhoto" align="center"><font color="#ffffff"><strong>Photo</strong></font></th>

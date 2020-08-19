@@ -387,19 +387,19 @@ class AuctionItemRow{
         <template id="auction-item-row-template">
            <td class="remove"><button class="pointer"><span class="far"></span></button></td>
            <td class="item"><a target="_blank" href="#">###</a></td>
-           <td class="photo" align="center">
+           <td class="photo">
                <a target="_blank" href="#">
                    <img class="icon-small" src="" alt="no image"/>
                    <img class="icon-large" src=""/>
                </a>
            </td>
            <td class="description"                  >XYZ</td>
-           <td class="bids"            align="right"><a target="_blank" href=""><span>##</span></a></td>
-           <td class="highbidder"      align="right"><span>Empty</span></td>
-           <td class="currentamount"   align="right"><span>#.##</span></td>
-           <td class="nextbidrequired" align="right"><span>#.##</span></td>
-           <td class="yourbid"         align="right"><span>#.##</span></td>
-           <td class="yourmaximum"     align="center"><span>#.##</span></td>
+           <td class="bids"           ><a target="_blank" href=""><span>##</span></a></td>
+           <td class="highbidder"     ><span>Empty</span></td>
+           <td class="currentamount"  ><span>#.##</span></td>
+           <td class="nextbidrequired"><span>#.##</span></td>
+           <td class="yourbid"        ><span>#.##</span></td>
+           <td class="yourmaximum"    ><span>#.##</span></td>
        </template>
    `;
 
@@ -422,6 +422,9 @@ class AuctionItemRow{
                 text-rendering: auto;
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
+            }
+            .description {
+                vertical-align: top;
             }
         </style>
     `;
