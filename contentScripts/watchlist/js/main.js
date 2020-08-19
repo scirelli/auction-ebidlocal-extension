@@ -95,6 +95,7 @@ chrome.storage.sync.get(['bidderId'], function(result) {
 
 function replacePage() {
     document.body.innerHTML = '';
+    document.body.removeAttribute('onmousemove');
 
     document.title = 'Watch List: ' + document.title;
     AuctionItemRow.__register(document.body);
