@@ -109,6 +109,8 @@ function replacePage() {
         addAllToWatchListControls(allAuctionItems.join('\n'));
     }
 
+    //TODO: Move watch list control scripts into the watch list control
+    //     Allow for adding multiple urls to the watch list so new items can be added only.
     let watchListElem = document.body.querySelector('auction-watch-list');
 
     document.body.querySelector('form.refreshRateForm').addEventListener('submit', (evt)=> {

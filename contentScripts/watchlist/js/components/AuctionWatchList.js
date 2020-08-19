@@ -91,14 +91,15 @@ class AuctionWatchList extends HTMLElement{
             });
         });
         newRow.addEventListener('update-start', ()=> {
-            newRow.classList.add('updating-animated');
+            //newRow.classList.add('updating-animated');
+            newRow.classList.add('updating');
         });
-        newRow.addEventListener('animationend', (e)=> {
-            e.preventDefault();
-            newRow.classList.remove('updating-animated');
-        });
+        // newRow.addEventListener('animationend', (e)=> {
+        //     e.preventDefault();
+        //     newRow.classList.remove('updating-animated');
+        // });
         newRow.addEventListener('update-end', ()=> {
-            //newRow.classList.remove('updating-animated');
+            newRow.classList.remove('updating');
         });
 
         newRow.addEventListener('change', (e)=> {
@@ -189,7 +190,7 @@ class AuctionWatchList extends HTMLElement{
                 transition: background-color 0.2s ease-out;
             }
             tbody tr{
-                /*transition: background-color 0.2s ease-out;*/
+                transition: background-color 0.2s ease-out;
             }
 
             tr:nth-of-type(odd).updating-animated {

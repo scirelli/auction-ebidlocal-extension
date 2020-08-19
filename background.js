@@ -21,7 +21,7 @@ chrome.webNavigation.onCompleted.addListener(function(details) {
     chrome.pageAction.show(details.tabId);
 }, {url: [{hostContains: ACTION_HOST, pathPrefix: '/cgi-bin/mmlist.cgi'}]});
 
-chrome.runtime.onMessage.addListener(function(oResponse, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function(oResponse/*, sender, sendResponse*/) {
     console.log(oResponse);
     //chrome.tabs.executeScript({file: 'contentScripts/watchlist/content.js'});
     //chrome.storage.local.set({variable: variableInformation});
