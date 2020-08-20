@@ -7,7 +7,8 @@ class AuctionItem{
     itemCurrentAmount;
     itemNextBidRequired;
     itemYourBid;
-    itemYourMaxBid;
+    itemTimeRemaining;
+    itemBidStatus;
 
     constructor(item) {
         if(typeof(item) === 'string') {
@@ -26,7 +27,8 @@ class AuctionItem{
         this.itemCurrentAmount = itm.itemCurrentAmount;
         this.itemNextBidRequired = itm.itemNextBidRequired;
         this.itemYourBid = itm.itemYourBid;
-        this.itemYourMaxBid = itm.itemYourMaxBid;
+        this.itemTimeRemaining = itm.itemTimeRemaining;
+        this.itemBidStatus = itm.itemBidStatus;
 
         return this;
     }

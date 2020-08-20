@@ -21,8 +21,7 @@ const styles = `
     </style>
 `;
 
-let refreshRate = 10,
-    isReplaced = false,
+let isReplaced = false,
     allAuctionItems = [],
     bidderId = {
         _bidderId: null,
@@ -48,10 +47,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponseCallback)=> {
             break;
         case 'add-url':
             allAuctionItems.push(message.url);
+
             sendResponseCallback({message: 'Added'});
 
             if(isReplaced) {
-                addAllItems([message.url]);
+                addAllToWatchListControls([message.url]);
             }
             break;
         case 'add-all':
@@ -71,7 +71,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponseCallback)=> {
                 })
                 .then(items=> {
                     if(isReplaced) {
-                        addAllItems(items);
+                        addAllToWatchListControls(items);
                     }
                 })
                 .catch(e=> {
@@ -94,55 +94,26 @@ chrome.storage.sync.get(['bidderId'], function(result) {
 });
 
 function replacePage() {
-    document.body.innerHTML = '';
+    let itemIdSpans = Array.prototype.map.call(document.body.querySelectorAll('tbody tr.DataRow'), (e)=> {
+        return `<span id="${e.getAttribute('id')}_endtime"></span>`;
+    });
+
     document.body.removeAttribute('onmousemove');
+    document.body.innerHTML = `<div style="display:none">${itemIdSpans.join('')}<input name="client"/><input name="auction"/><input name="contents"/></div>`;
 
     document.title = 'Watch List: ' + document.title;
     AuctionItemRow.__register(document.body);
     AuctionWatchList.__register(document.body);
     AuctionWatchListControls.__register(document.body);
     document.body.insertAdjacentHTML('beforeend', styles);
-    document.body.insertAdjacentHTML('beforeend', '<auction-watch-list-controls></auction-watch-list-controls>');
-    document.body.insertAdjacentHTML('beforeend', '<auction-watch-list data-refresh-rate="10"></auction-watch-list>');
+    document.body.insertAdjacentHTML('beforeend', '<auction-watch-list-controls data-watch-list-id="a-watch-list"></auction-watch-list-controls>');
+    document.body.insertAdjacentHTML('beforeend', '<auction-watch-list id="a-watch-list" data-refresh-rate="10"></auction-watch-list>');
 
     if(allAuctionItems.length) {
         addAllToWatchListControls(allAuctionItems.join('\n'));
     }
 
-    //TODO: Move watch list control scripts into the watch list control
-    //     Allow for adding multiple urls to the watch list so new items can be added only.
-    let watchListElem = document.body.querySelector('auction-watch-list');
-
-    document.body.querySelector('form.refreshRateForm').addEventListener('submit', (evt)=> {
-        evt.preventDefault();
-        evt.stopPropagation();
-        let rate = parseInt(evt.currentTarget.querySelector('input[name="refreshRate"]').value) || refreshRate;
-
-        watchListElem.setAttribute('data-refresh-rate', rate);
-    });
-    document.body.querySelector('form.addItemform').addEventListener('submit', (evt)=> {
-        evt.preventDefault();
-        evt.stopPropagation();
-        let items = evt.currentTarget.querySelector('textarea[name="addItem"]').value;
-
-        items = items.split(/[\t\n \r]/).filter(Boolean).filter(url=> {
-            try {
-                new URL(url);
-                return true;
-            }catch {
-                return false;
-            }
-        });
-
-        addAllToWatchList(items);
-    });
-    document.body.querySelector('form.addItemform input[type="button"]').addEventListener('click', (evt)=> {
-        evt.preventDefault();
-        evt.stopPropagation();
-        document.body.querySelector('form.addItemform textarea[name="addItem"]').value = '';
-    });
-
-    watchListElem.addEventListener('watchlist-data-change', (e)=> {
+    document.querySelector('auction-watch-list#a-watch-list').addEventListener('watchlist-data-change', (e)=> {
         let highBidderElem = e.detail.row.querySelector('td.highbidder'),
             bId = bidderId.bidderId || e.detail.data.auctionInfo.bidder.id.trim();
 
@@ -151,19 +122,6 @@ function replacePage() {
         }else {
             highBidderElem.classList.remove('not-high-bidder');
         }
-    });
-}
-
-function addAllItems(items) {
-    addAllToWatchListControls(items);
-    addAllToWatchList(items);
-}
-
-function addAllToWatchList(items) {
-    items.chain((url)=> {
-        return ((url)=>{
-            document.body.querySelector('auction-watch-list').dispatchEvent(new CustomEvent('add-item', {detail: {src: url}}));
-        }).delay(null, 500, url);
     });
 }
 

@@ -71,6 +71,16 @@ class AuctionWatchList extends HTMLElement{
         }
     }
 
+    containsItem(url) {
+        return !!this.getRowByURL(url);
+    }
+
+    getRowByURL(url) {
+        let id = AuctionItemRow.getAuctionIdFromURL(url).fullId;
+
+        return this.querySelector(`table > tbody > tr[id="${id}"]`);
+    }
+
     _createRow(oData) {
         let newRow = document.createElement('tr', {is: AuctionItemRow.TAG_NAME});
         newRow.__auctionItemRow = new AuctionItemRow(newRow);
@@ -82,7 +92,7 @@ class AuctionWatchList extends HTMLElement{
             let changes = AuctionItemRow.whatDataChanged(e.detail.oldData, e.detail.data);
 
             if(!e.detail.oldData) return;
-            if(Object.keys(changes).length === 1 && changes['itemYourMaxBid']) return;
+            if(Object.keys(changes).length === 1 && changes['itemTimeRemaining']) return;
 
             newRow.classList.add('changed');
             newRow.addEventListener('mouseenter', function onHover() {
@@ -113,8 +123,8 @@ class AuctionWatchList extends HTMLElement{
         newRow.addEventListener('data-change', (e)=> {
             this.dispatchEvent(new CustomEvent('watchlist-data-change', {detail:
                 {
-                    row:  newRow,
-                    data: e.detail.data,
+                    row:     newRow,
+                    data:    e.detail.data,
                     oldData: e.detail.oldData
                 }
             }));
@@ -150,7 +160,7 @@ class AuctionWatchList extends HTMLElement{
                         <th align="center"><font color="#ffffff"><strong>Current <br> Amount</strong></font></th>
                         <th align="center"><font color="#ffffff"><strong>Next Bid <br> Required</strong></font></th>
                         <th align="center"><font color="#ffffff"><strong>Your <br> Bid</strong></font></th>
-                        <th align="center"><font color="#ffffff"><strong>Your <br> Maximum</strong></font></th>
+                        <th align="center"><font color="#ffffff"><strong>Time <br> Remaining</strong></font></th>
                     </tr>
                 </thead>
                 <tbody></tbody>

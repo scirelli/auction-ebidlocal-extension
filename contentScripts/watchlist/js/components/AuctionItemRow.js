@@ -51,7 +51,7 @@ Content-Type: application/x-www-form-urlencoded
 
 Form Data
 71=&m71=5.00&auction=staples430&contents=71%2F&bidder=18848&password=<password>&item=71&search=71&bid=Submit+Bids
-71: 
+71:
 m71: 5.00
 auction: staples430
 contents: 71/
@@ -74,7 +74,8 @@ class AuctionItemRow{
         'itemHighBidder',
         'itemCurrentAmount',
         'itemNextBidRequired',
-        'itemYourMaxBid'
+        'itemTimeRemaining',
+        'itemBidStatus'
     ];
 
     static get observedAttributes() { return ['src', 'data-refresh-rate', 'data-auto-refresh']; }
@@ -123,7 +124,7 @@ class AuctionItemRow{
                         }
                     })
                     .catch(e=> {
-                        this.elem.dispatchEvent(new CustomEvent('update-failed', {detail:{error: e, elem: this.elem}}));
+                        this.elem.dispatchEvent(new CustomEvent('update-failed', {detail: {error: e, elem: this.elem}}));
                         this.elem.remove();
                     });
                 break;
@@ -176,12 +177,12 @@ class AuctionItemRow{
                     this.elem.dispatchEvent(new Event('change'));
                     this.elem.dispatchEvent.defer(this.elem, new CustomEvent('data-change', {detail: {data: data, oldData: oldData}}));
                 }
-                self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail:{data: data}}));
+                self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail: {data: data}}));
                 return data;
             })
             .catch((e)=> {
                 console.error(e);
-                self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail:{data: {}, error: e}}));
+                self.elem.dispatchEvent.defer(self.elem, new CustomEvent('update-end', {detail: {data: {}, error: e}}));
                 throw e;
             });
     }
@@ -204,8 +205,8 @@ class AuctionItemRow{
     }
 
     _update(data) {
-        this._updateData(data);
-        this._updateStyles(data);
+        let oldData = this._updateData(data);
+        this._updateStyles(data, oldData);
     }
 
     _updateData(newData) {
@@ -220,7 +221,8 @@ class AuctionItemRow{
 
             auction = newData.auctionInfo.auction,
             item = newData.auctionInfo.item,
-            allData = {...item, ...auction};
+            allData = {...item, ...auction},
+            oldData = this.oldData;
 
         itemElem.textContent = allData.itemId;
         descriptionElem.textContent = item.itemDescription;
@@ -229,12 +231,14 @@ class AuctionItemRow{
         currentAmountElem.textContent = allData.itemCurrentAmount;
         nextBidRequiredElem.textContent = allData.itemNextBidRequired;
         yourBidElem.textContent = allData.itemYourBid;
-        yourMaxBidElem.textContent = allData.itemYourMaxBid;
+        yourMaxBidElem.textContent = allData.itemTimeRemaining + ' ' + allData.itemBidStatus;
 
         this.oldData = newData;
+
+        return oldData;
     }
 
-    _updateStyles(/*data*/) {
+    _updateStyles(/*newData, oldData*/) {
     }
 
     _hasDataChanged(oldData, newData) {
@@ -247,7 +251,7 @@ class AuctionItemRow{
             return acc || oldData[prop] !== newData[prop];
         }, false);
     }
-    
+
     _onRefresh() {
         this._refresh();
     }
@@ -278,19 +282,20 @@ class AuctionItemRow{
             trData = table.querySelector('tbody > tr:first-child') || {},
             submitTable = elem.querySelector('table#SubmitBids') || {},
 
-            client = elem.querySelector('input[name="client"]') || {},
-            auction = elem.querySelector('input[name="auction"]') || {},
-            contents = elem.querySelector('input[name="contents"]') || {},
-            icon     = trData.querySelector('td.photo img') || {},
-            description = trData.querySelector('td.description') || {},
-            bids        = trData.querySelector('td.bids') || {},
-            highbidder = trData.querySelector('td.highbidder') || {},
-            currentAmount = trData.querySelector('td.currentamount') || {},
+            client          = elem.querySelector('input[name="client"]') || {},
+            auction         = elem.querySelector('input[name="auction"]') || {},
+            contents        = elem.querySelector('input[name="contents"]') || {},
+            icon            = trData.querySelector('td.photo img') || {},
+            description     = trData.querySelector('td.description') || {},
+            bids            = trData.querySelector('td.bids') || {},
+            highbidder      = trData.querySelector('td.highbidder') || {},
+            currentAmount   = trData.querySelector('td.currentamount') || {},
             nextBidRequired = trData.querySelector('td.nextbidrequired') || {},
             yourBid         = trData.querySelector('td.yourbid') || {},
-            yourMaxBid      = trData.querySelector('td.yourmaximum') || {},
-            yourBidNumber = submitTable.querySelector('td.sbidcurbid strong') || {},
-            yourBidNumber2 = submitTable.querySelector('td.sbidbidder input[name="bidder"]') || {},
+            yourMaxBid      = trData.querySelector('td.yourmaximum span:nth-of-type(2)') || {},
+            bidStatus       = trData.querySelector('td.yourmaximum span:nth-of-type(3)') || {},
+            yourBidNumber   = submitTable.querySelector('td.sbidcurbid strong') || {},
+            yourBidNumber2  = submitTable.querySelector('td.sbidbidder input[name="bidder"]') || {},
 
             itemId = (contents.value || '').replace('/', ''),  //contents
             itemIcon = icon.src || '',
@@ -300,7 +305,8 @@ class AuctionItemRow{
             itemCurrentAmount = (currentAmount.textContent || '').trim(),
             itemNextBidRequired = (nextBidRequired.textContent || '').trim(),
             itemYourBid = (yourBid.textContent || '').trim(),
-            itemYourMaxBid = (yourMaxBid.textContent || '').replace('submit bid', '').replace('refresh', '').replace('watch', '').trim(),
+            itemTimeRemaining = (yourMaxBid.textContent || '').replace('submit bid', '').replace('refresh', '').replace('watch', '').replace('remaining', '').trim(),
+            itemBidStatus = (bidStatus.textContent || '').trim(),
             auctionId = auction.value || '',  //event
             auctionName = client.value || '', //c
             auctionNum = Auction.AUCTIONID_ID_REG.exec(auctionId + '/' + itemId),
@@ -322,14 +328,21 @@ class AuctionItemRow{
                     itemCurrentAmount,
                     itemNextBidRequired,
                     itemYourBid,
-                    itemYourMaxBid
+                    itemTimeRemaining,
+                    itemBidStatus
                 })
             }
         };
     }
 
     static getAuctionIdFromURL(url) {
-        let fullID = Auction.AUCTIONID_ID_REG.exec(url.search),
+        url = new URL(url);
+
+        return AuctionItemRow.parseAuctionIds(url.search);
+    }
+
+    static parseAuctionIds(queryString) {
+        let fullID = Auction.AUCTIONID_ID_REG.exec(queryString),
             client = '',
             auctionId = '',
             itemId = '',
@@ -343,7 +356,7 @@ class AuctionItemRow{
             auctionNum = fullID[Auction.AUCTION_NUM] || '';
             fullId = fullID[Auction.FULL_ID] || '';
         }else {
-            console.error(new Error('Unable to parse URL: ' + url));
+            console.error(new Error('Unable to parse URL: ' + queryString));
         }
 
         return {

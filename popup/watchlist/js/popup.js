@@ -85,3 +85,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
         }
     });
 });
+/*
+chrome.storage.local.get(['allAuctionItems'], function(allAuctionItems) {
+    allAuctionItems = allAuctionItems || [];
+    allAuctionItems.push(message.url);
+
+    chrome.storage.local.set({allAuctionItems: allAuctionItems}, function() {
+        console.log(`Item url saved '${message.url}'`);
+        sendResponseCallback({message: 'Added'});
+    });
+});
+*/

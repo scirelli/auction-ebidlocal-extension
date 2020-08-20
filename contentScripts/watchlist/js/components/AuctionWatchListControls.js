@@ -1,5 +1,8 @@
 class AuctionWatchListControls extends HTMLElement{
     static TAG_NAME = 'auction-watch-list-controls';
+    static REFRESH_RATE = 10;
+
+    itemQueue = [];
 
     constructor() {
         super();
@@ -10,13 +13,102 @@ class AuctionWatchListControls extends HTMLElement{
         template = div.querySelector('template');
 
         this.appendChild(template.content.cloneNode(true));
+
+        this.__attachEventListeners();
+    }
+
+    static get observedAttributes() { return ['data-watch-list-id']; }
+
+    attributeChangedCallback(name/*, oldValue, newValue*/) {
+        switch(name) {
+            case 'data-watch-list-id':
+                break;
+        }
+    }
+
+    getLinkedWatchListElement() {
+        let id = this.getAttribute('data-watch-list-id'),
+            auctionWatchList = document.body.querySelector(`auction-watch-list#${id}`);
+
+        if(!auctionWatchList) throw new Error('Must link a watch list to this watch list controls.');
+
+        return auctionWatchList;
+    }
+
+    __onAddItems(evnt) {
+        this.__addItemUrlsToTextarea(
+            this.__addItems(evnt.detail.items)
+        );
+    }
+
+    __addItems(items) {
+        items = this.__filterItemList(items || []);
+
+        this.__addAllToWatchList.defer(this, items).then(()=> {
+            this.dispatchEvent(new CustomEvent('all-items-added', {detail: {items: items}}));
+        });
+
+        return items;
+    }
+
+    __filterItemList(items) {
+        return this.__filterAlreadyAddedItems(items.filter((item)=> {
+            try{
+                return new URL(item);
+            }catch(e) {
+                return false;
+            }
+        })).filter(Boolean);
+    }
+
+    __filterAlreadyAddedItems(items) {
+        let auctionWatchList = this.getLinkedWatchListElement();
+        return [].concat(items)
+            .filter((item)=> {
+                return !auctionWatchList.containsItem(item);
+            });
+    }
+
+    __addItemUrlsToTextarea(items) {
+        this.querySelector('textarea').value += '\n' + items.join('\n');
+        return this;
+    }
+
+    __attachEventListeners() {
         this.addEventListener('add-item', (evnt)=>{
-            this.__addItem([].concat(evnt.detail.items || []));
+            this.__onAddItems(evnt);
+        });
+
+        this.querySelector('form.refreshRateForm').addEventListener('submit', (evt)=> {
+            evt.preventDefault();
+            evt.stopPropagation();
+            let rate = parseInt(evt.currentTarget.querySelector('input[name="refreshRate"]').value) || AuctionWatchListControls.REFRESH_RATE;
+
+            this.getLinkedWatchListElement().setAttribute('data-refresh-rate', rate);
+        });
+
+        document.body.querySelector('form.addItemform').addEventListener('submit', (evt)=> {
+            evt.preventDefault();
+            evt.stopPropagation();
+            let items = evt.currentTarget.querySelector('textarea[name="addItem"]').value;
+
+            this.__addItems(items.split(/[\t\n \r]/));
+        });
+
+        document.body.querySelector('form.addItemform input[type="button"]').addEventListener('click', (evt)=> {
+            evt.preventDefault();
+            evt.stopPropagation();
+            this.querySelector('form.addItemform textarea[name="addItem"]').value = '';
         });
     }
 
-    __addItem(items) {
-        this.querySelector('textarea').value += '\n' + items.filter(Boolean).join('\n');
+    __addAllToWatchList(items) {
+        let self = this;
+        return items.chain((url)=> {
+            return ((url)=>{
+                self.getLinkedWatchListElement().dispatchEvent(new CustomEvent('add-item', {detail: {src: url}}));
+            }).delay(self, 500, url);
+        });
     }
 
     static __register(doc) {
