@@ -64,6 +64,12 @@ class AuctionWatchList extends HTMLElement{
 
             if(!this.querySelector(`table > tbody > tr[id="${id}"]`)) {
                 let row = this._createRow(oData);
+
+                row.classList.add('invisible');
+                row.addEventListener('update-end', function show() {
+                    row.classList.remove('invisible');
+                    row.removeEventListener('update-end', show);
+                });
                 this.querySelector('table > tbody').appendChild(row);
             }
         }catch(e) {
@@ -231,6 +237,9 @@ class AuctionWatchList extends HTMLElement{
             @keyframes UpdateAnimation {
                 0%{background-position:50% 0%}
                 100%{background-position:50% -150%}
+            }
+            .invisible {
+                visibility: hidden; 
             }
         </style>
     `
