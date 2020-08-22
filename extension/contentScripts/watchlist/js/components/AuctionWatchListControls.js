@@ -141,11 +141,27 @@ class AuctionWatchListControls extends HTMLElement{
             section.add-item-section {
                 margin-bottom: 4px;
             }
+
+            #logo-link a{
+                visibility: initial;
+                display: block;
+                float: right;
+            }
+
+            #logo-link img{
+                display: inline-block;
+            }
         </style>
     `
 
     static template = `
         <template id="auction-watch-list-controls-template">
+            
+            <div id="logo-link">
+                <a href="https://www.ebidlocal.com/">
+                    <img src="/images/logo1.png" alt="Ebid Local Online Auctions"/>
+                </a>
+            </div>
             <div class="auction-watch-list-controls-container">
                 <section class="add-item-section">
                     <form class="addItemform" action="#">
