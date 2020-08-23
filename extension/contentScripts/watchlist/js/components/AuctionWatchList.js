@@ -8,6 +8,7 @@ class AuctionWatchList extends HTMLElement{
 
     refreshIntervalId = null;
     refreshRate = AuctionItemRow.DEFAULT_REFRESH_RATE_MS;
+    running = false;
 
     constructor() {
         super();
@@ -15,29 +16,42 @@ class AuctionWatchList extends HTMLElement{
             templateContent = template.content;
 
         this.appendChild(templateContent.cloneNode(true));
-        this.addEventListener('add-item', this._onAddItem.bind(this));
+        this._registerEventListeners();
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
         switch(name) {
             case 'data-refresh-rate':
                 this.refreshRate =  (parseInt(newValue) || 0) * 1000 || AuctionWatchList.DEFAULT_REFRESH_RATE_MS;
-                if(this.refreshIntervalId === null) {
-                    this._startRefresh();
-                }
+                this._startRefresh();
                 break;
         }
     }
 
+    _registerEventListeners() {
+        this.addEventListener('add-item', this._onAddItem.bind(this));
+        this.addEventListener('start-refresh', this._onStartRefresh.bind(this));
+        this.addEventListener('stop-refresh', this._stopRefresh.bind(this));
+        this.addEventListener('sort', this._onSort.bind(this));
+        this._addDragListeners();
+    }
+
     _startRefresh() {
+        if(this.running) return;
+        this.running = true;
+        return this._commenceRefresh();
+    }
+    _commenceRefresh() {
+        if(!this.running) return;
         this.refreshIntervalId = setTimeout(()=> {
-            this._refresh().then(this._startRefresh.bind(this));
+            this._refresh().then(this._commenceRefresh.bind(this));
         }, this.refreshRate);
     }
     _stopRefresh() {
         //Does nothing. Would need to break the promise chain.
         clearTimeout(this.refreshIntervalId);
-        this.refreshIntervalId = 0;
+        this.refreshIntervalId = null;
+        this.running = false;
     }
 
     _refresh() {
@@ -65,11 +79,8 @@ class AuctionWatchList extends HTMLElement{
             if(!this.querySelector(`table > tbody > tr[id="${id}"]`)) {
                 let row = this._createRow(oData);
 
-                row.classList.add('invisible');
-                row.addEventListener('update-end', function show() {
-                    row.classList.remove('invisible');
-                    row.removeEventListener('update-end', show);
-                });
+                this._addRowEventListeners(row);
+
                 this.querySelector('table > tbody').appendChild(row);
             }
         }catch(e) {
@@ -93,6 +104,7 @@ class AuctionWatchList extends HTMLElement{
         newRow.setAttribute('src', oData.sourceURL);
         newRow.classList.add('DataRow');
         newRow.setAttribute('id', oData.data.fullId);
+        newRow.setAttribute('draggable', 'true');
 
         newRow.addEventListener('data-change', (e)=> {
             let changes = AuctionItemRow.whatDataChanged(e.detail.oldData, e.detail.data);
@@ -142,8 +154,108 @@ class AuctionWatchList extends HTMLElement{
         return newRow;
     }
 
+    _sort(field, direction) {
+        this._stopRefresh();
+        let rows = Array.prototype.slice.call(this.querySelectorAll('table > tbody > tr') || [], 0);
+        console.log(field, direction, rows.length);
+        this._startRefresh();
+    }
+
+    _onSort(e) {
+        this._sort(e.detail.sort.field, e.detail.sort.direction);
+    }
+
+    _onStartRefresh() {
+        this._startRefresh();
+    }
+
+    _onStopRefresh() {
+        this._stopRefresh();
+    }
+
     _onAddItem(evt) {
         this._addItem(evt.detail.src);
+    }
+
+    _addRowEventListeners(row) {
+        this._addHideRowOnAddListener(row);
+
+        return this;
+    }
+
+    _addHideRowOnAddListener(row) {
+        row.classList.add('invisible');
+        row.addEventListener('update-end', function show() {
+            row.classList.remove('invisible');
+            row.removeEventListener('update-end', show);
+        });
+
+        return this;
+    }
+
+    _addDragListeners() {
+        let dragged = null;
+
+        this.addEventListener('dragstart', function(event) {
+            // store a ref. on the dragged elem
+            dragged = event.target;
+            // make it half transparent
+            event.target.style.opacity = .5;
+        }, false);
+
+        this.addEventListener('dragend', function(event) {
+            // reset the transparency
+            event.target.style.opacity = '';
+        }, false);
+
+        this.addEventListener('drag', ()=> {}, false);
+
+        this.addEventListener('dragover', (event)=> {
+            // prevent default to allow drop
+            event.preventDefault();
+        }, false);
+
+        this.addEventListener('dragenter', function(event) {
+            // highlight potential drop target when the draggable element enters it
+            if(event.target === dragged) return;
+            if(event.target.parentNode === dragged) return;
+
+            if(event.target.tagName.toLowerCase() === 'tr') {
+                event.target.style.background = 'gray';
+            }else if(event.target.parentNode.tagName.toLowerCase() === 'tr') {
+                event.target.parentNode.style.background = 'gray';
+            }
+        }, false);
+        this.addEventListener('dragleave', function(event) {
+            // reset background of potential drop target when the draggable element leaves it
+            if(event.target === dragged) return;
+            if(event.target.parentNode === dragged) return;
+            if (event.target.tagName.toLowerCase() === 'tr') {
+                event.target.style.background = '';
+            }else if(event.target.parentNode.tagName.toLowerCase() === 'tr') {
+                event.target.parentNode.style.background = '';
+            }
+        }, false);
+
+        this.addEventListener('drop', function(event) {
+            // prevent default action (open as link for some elements)
+            event.preventDefault();
+            if(event.target === dragged) return;
+            if(event.target.parentNode === dragged) return;
+
+            // move dragged elem to the selected drop target
+            if (event.target.tagName.toLowerCase() === 'tr') {
+                event.target.style.background = '';
+                dragged.parentNode.removeChild(dragged);
+                event.target.insertAdjacentElement('afterend', dragged );
+                dragged = null;
+            }else if(event.target.parentNode.tagName.toLowerCase() === 'tr') {
+                event.target.parentNode.style.background = '';
+                dragged.parentNode.removeChild(dragged);
+                event.target.parentNode.insertAdjacentElement('afterend', dragged );
+                dragged = null;
+            }
+        }, false);
     }
 
     static __register(doc) {
