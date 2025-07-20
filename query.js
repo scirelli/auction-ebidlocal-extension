@@ -348,32 +348,69 @@ if(!localStorage.getItem('watchlists')) {
 	function appendStyles() {
 		const s = document.createElement('style')
 		s.innerText = `
-			.watchlist {
-			}
-			.watchlist > details {
-				margin-left: 25px;
-				border: solid black 1px;
-				margin: 5px;
-			}
-			.watchlist-title {
-				font-weight: bold;
-				font-size: 1.5vw;
+			body {
+					font-family: Arial, sans-serif;
+					background: #f5f5f5;
 			}
 
+			details {
+					background: white;
+					border: 1px solid #ddd;
+					border-radius: 8px;
+					padding: 16px;
+					margin: 20px 0;
+			}
+
+			summary {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					cursor: pointer;
+					list-style: none;
+					padding: 4px;
+					border-radius: 4px;
+					transition: background-color 0.2s ease;
+			}
+
+			summary:hover {
+					background-color: #f8f9fa;
+			}
+
+			summary::before {
+					content: '▶';
+					margin-right: 8px;
+					transition: transform 0.2s ease;
+			}
 			summary.item-title {
 				text-transform: capitalize;
-				font-weight: bold;
-				font-size: 0.8vw;
-			}
-			summary.item-title {
-				padding:10px 2px;
-			}
-			summary.item-title:hover, details[open] > summary.item-title {
-				background-color: #676a6c2b;
 			}
 
-			.search-listitem.mb-2 {
-				margin-left: 25px;
+			details[open] > summary::before {
+					transform: rotate(90deg);
+			}
+
+			summary > span {
+					flex: 1;
+			}
+
+			summary > button {
+					margin-left: auto;
+					padding: 8px 16px;
+					background: #007bff;
+					color: white;
+					border: none;
+					border-radius: 4px;
+					cursor: pointer;
+					transition: background 0.2s ease;
+			}
+
+			summary > button:hover {
+					background: #0056b3;
+			}
+
+			details > p {
+					margin: 16px 0 0 0;
+					color: #666;
 			}
 		`;
 		document.head.appendChild(s);
@@ -385,10 +422,12 @@ if(!localStorage.getItem('watchlists')) {
 
 	function appendWatchlist(wl) {
 		const watchlistElm = document.createElement('details'),
-			watchlistTitleElm = document.createElement('summary');
+			watchlistTitleElm = document.createElement('summary'),
+			watchlistTitleElmSpan = document.createElement('span');
 
-		watchlistTitleElm.innerText = wl.name;
+		watchlistTitleElmSpan.innerText = wl.name;
 		watchlistTitleElm.classList.add('watchlist-title');
+		watchlistTitleElm.appendChild(watchlistTitleElmSpan);
 		watchlistElm.appendChild(watchlistTitleElm);
 		watchlistElm.classList.add('watchlist');
 		Array.prototype.slice.apply(document.body.querySelectorAll('.container')).pop().appendChild(watchlistElm);
@@ -396,11 +435,17 @@ if(!localStorage.getItem('watchlists')) {
 		return wl.items.chain(item => {
 			return searchItem(item).then(listItemElm => {
 				const detailsElm = document.createElement('details'),
-					summaryElm = document.createElement('summary');
+					summaryElm = document.createElement('summary'),
+					summarySpan =  document.createElement('span'),
+					summaryRmBtn = document.createElement('button');
 
 				let cnt = listItemElm.querySelectorAll('.bg-white.border.mt-2.px-1.py-3.d-flex.flex-wrap').length;
-				summaryElm.innerText = `${item} (${cnt})`;
+				summarySpan.innerText = `${item} (${cnt})`;
+				summaryRmBtn.innerText = 'Remove';
 				summaryElm.classList.add('item-title');
+				summaryElm.appendChild(summarySpan);
+				summaryElm.appendChild(summaryRmBtn);
+
 				detailsElm.appendChild(summaryElm);
 				detailsElm.appendChild(listItemElm);
 				if(cnt) watchlistElm.appendChild(detailsElm);
