@@ -20,7 +20,53 @@
 		<summary>Section title</summary>
 	</details>
 */
-watchlists = [
+if(!Function.prototype.delay) {
+    Function.prototype.delay = function delay(thsPtr, time) {
+        let args = Array.prototype.slice.call(arguments, 2);
+
+        time = parseInt(time) || 0;
+
+        return new Promise((resolve)=> {
+            setTimeout((...args)=> {
+                resolve(this.apply(thsPtr, args));
+            }, time, ...args);
+        });
+    };
+}
+
+if(!Function.prototype.defer) {
+    Function.prototype.defer = function defer(thsPtr) {
+        Array.prototype.splice.call(arguments, 1, 0, 0)
+        return this.delay.apply(this, arguments);
+    };
+}
+
+if(!Function.prototype.chain) {
+    Function.prototype.chain = function chain(iter) {
+        let itm = iter.next();
+        if(!itm.done) {
+            return Promise.resolve(this(itm.value)).then(()=> {
+                return chain.call(this, iter);
+            });
+        }
+        return Promise.resolve();
+    };
+}
+
+if(!Array.prototype.chain) {
+    Array.prototype.chain = function chain(fnc, i=0) {
+        let itm = this[i];
+        if(itm) {
+            return Promise.resolve(fnc(itm)).then(()=> {
+                return chain.call(this, fnc, i+1);
+            });
+        }
+        return Promise.resolve();
+    };
+}
+
+if(!localStorage.getItem('watchlists')) {
+	localStorage.setItem('watchlists', JSON.stringify([
 	{
 		"name": "Appliances",
 		"items": [
@@ -221,10 +267,18 @@ watchlists = [
 			"watering",
 			"weld",
 			"welder",
-			"welding"
+			"welding",
+			"wagon"
+		]
+	},
+	{
+		"name": "Furniture",
+		"items": [
+			"table"
 		]
 	}
-];
+	], null, null));
+}
 
 (()=> {
 	function Watchlist(name, items=[]) {
@@ -291,25 +345,72 @@ watchlists = [
 		.then(doc => doc.body.querySelector('div.search-listitem'))
 	}
 
-	function appendWatchlist(wl){
+	function appendStyles() {
+		const s = document.createElement('style')
+		s.innerText = `
+			.watchlist {
+			}
+			.watchlist > details {
+				margin-left: 25px;
+				border: solid black 1px;
+				margin: 5px;
+			}
+			.watchlist-title {
+				font-weight: bold;
+				font-size: 1.5vw;
+			}
+
+			summary.item-title {
+				text-transform: capitalize;
+				font-weight: bold;
+				font-size: 0.8vw;
+			}
+			summary.item-title {
+				padding:10px 2px;
+			}
+			summary.item-title:hover, details[open] > summary.item-title {
+				background-color: #676a6c2b;
+			}
+
+			.search-listitem.mb-2 {
+				margin-left: 25px;
+			}
+		`;
+		document.head.appendChild(s);
+	}
+
+	function clearContent() {
+		Array.prototype.slice.apply(document.body.querySelectorAll('.container')).pop().innerHTML = '';
+	}
+
+	function appendWatchlist(wl) {
 		const watchlistElm = document.createElement('details'),
 			watchlistTitleElm = document.createElement('summary');
 
 		watchlistTitleElm.innerText = wl.name;
 		watchlistTitleElm.classList.add('watchlist-title');
-		watchlistElm.appendChild(summaryElm);
+		watchlistElm.appendChild(watchlistTitleElm);
 		watchlistElm.classList.add('watchlist');
+		Array.prototype.slice.apply(document.body.querySelectorAll('.container')).pop().appendChild(watchlistElm);
 
-		searchItem('chair').then(listItemElm => {
-			const detailsElm = document.createElement('details'),
-				summaryElm = document.createElement('summary');
+		return wl.items.chain(item => {
+			return searchItem(item).then(listItemElm => {
+				const detailsElm = document.createElement('details'),
+					summaryElm = document.createElement('summary');
 
-			summaryElm.innerText = 'Chair';
-			detailsElm.appendChild(summaryElm);
-			detailsElm.appendChild(listItemElm);
-
-			document.body.querySelector('.current-auction').innerHTML = '';
-			document.body.querySelector('.current-auction').appendChild(detailsElm)
+				let cnt = listItemElm.querySelectorAll('.bg-white.border.mt-2.px-1.py-3.d-flex.flex-wrap').length;
+				summaryElm.innerText = `${item} (${cnt})`;
+				summaryElm.classList.add('item-title');
+				detailsElm.appendChild(summaryElm);
+				detailsElm.appendChild(listItemElm);
+				if(cnt) watchlistElm.appendChild(detailsElm);
+			});
 		});
 	}
+
+	clearContent();
+	appendStyles();
+	JSON.parse(localStorage.getItem('watchlists')).chain(l => {
+		return appendWatchlist(l);
+	});
 })();
