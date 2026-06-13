@@ -537,7 +537,8 @@ const watchlistItemTempl = `
 	}
 
 	function searchItem(item) {
-		let url = new URL('https://auction.ebidlocal.com/Public/GlobalSearch/GetGlobalSearchResults');
+		let url = new URL(location.origin);
+		url.pathname = '/Public/GlobalSearch/GetGlobalSearchResults';
 		url.search = new URLSearchParams({
 			pageNumber: 1,
 			pagesize:   10000,
