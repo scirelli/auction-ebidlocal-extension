@@ -113,7 +113,9 @@ if(!localStorage.getItem('watchlists')) {
 			"toilet",
 			"trash",
 			"umbrella",
-			"vacuum"
+			"vacuum",
+			"cast",
+			"iron"
 		] 
 	},
 	{
